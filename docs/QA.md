@@ -63,6 +63,7 @@
 ## F. ความปลอดภัย (นักพัฒนา)
 - [ ] F1 ใช้ anon key ของ Supabase query ตาราง `students` → ได้ 0 แถว (RLS)
 - [ ] F2 ไม่มี key/รหัสใน bundle: ค้น `service_role` ใน DevTools → Sources ไม่เจอ
+- [ ] F4 `curl -I <url>/scan` มี X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy · `/api/*` มี Cache-Control: no-store · กล้องยังเปิดได้บนมือถือ
 - [ ] F3 `git log -p | grep -E "@email.kmutnb|0[689][0-9]{8}"` ไม่เจอข้อมูลจริง
 
 ## ก่อนวันงาน

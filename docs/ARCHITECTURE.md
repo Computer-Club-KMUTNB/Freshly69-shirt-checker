@@ -50,6 +50,9 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 - Audit writes use `after()` so they never delay the response. Settings are cached 15 s per instance.
 - Pages use `useCached` (stale-while-revalidate). Only count data is persisted to sessionStorage; names/phones stay in memory.
 
+## Security headers (next.config.ts)
+X-Frame-Options DENY + CSP `frame-ancestors 'none'`, nosniff, Referrer-Policy no-referrer, Permissions-Policy (camera=self only), X-Robots-Tag noindex, `Cache-Control: no-store` on /api. No full CSP yet (barcode WASM comes from jsDelivr) — add one only after testing on real phones.
+
 ## Known limits
 - Browsers cannot read a hardware id; the device id is random and stored in localStorage (lost if the
   browser data is cleared / incognito).
