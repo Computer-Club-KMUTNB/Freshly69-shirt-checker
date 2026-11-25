@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
+import { BarChart3, Lock, ScanLine, Shirt, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/client";
 
 export interface SessionInfo {
@@ -14,52 +15,113 @@ export interface SessionInfo {
 const Ctx = createContext<SessionInfo | null>(null);
 export const useSession = () => useContext(Ctx);
 
-/** Logged-in frame: loads the session (or bounces to "/") and shows the bottom tab bar. */
+const KEY = "f69_session_cache";
+
+function cachedSession(): SessionInfo | null {
+  try {
+    const v = sessionStorage.getItem(KEY);
+    return v ? (JSON.parse(v) as SessionInfo) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Logged-in frame. Renders instantly from the session cached in sessionStorage, then confirms it
+ * with the server in the background (bounces to "/" if it expired).
+ */
 export default function Shell({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const router = useRouter();
   const path = usePathname();
   const [s, setS] = useState<SessionInfo | null>(null);
 
   useEffect(() => {
-    api<{ session: SessionInfo | null }>("/api/auth/me").then(({ session }) => {
-      if (!session) router.replace("/");
-      else if (adminOnly && session.role !== "admin") router.replace("/scan");
-      else setS(session);
-    });
+    const c = cachedSession();
+    if (c && !(adminOnly && c.role !== "admin")) setS(c);
+    api<{ session: SessionInfo | null }>("/api/auth/me")
+      .then(({ session }) => {
+        if (!session) {
+          sessionStorage.removeItem(KEY);
+          router.replace("/");
+        } else if (adminOnly && session.role !== "admin") router.replace("/scan");
+        else {
+          sessionStorage.setItem(KEY, JSON.stringify(session));
+          setS(session);
+        }
+      })
+      .catch(() => {
+        /* offline: keep the cached session; API calls will show their own errors */
+      });
   }, [router, adminOnly]);
 
   async function lock() {
-    await api("/api/auth/lock", { method: "POST" });
+    try {
+      sessionStorage.clear();
+    } catch {}
+    await api("/api/auth/lock", { method: "POST" }).catch(() => {});
     router.replace("/");
   }
 
-  if (!s) return <div className="grid min-h-dvh place-items-center text-gray-400">กำลังโหลด...</div>;
-
   const tabs = [
-    { href: "/scan", label: "สแกน", icon: "📷" },
-    { href: "/overview", label: "ภาพรวม", icon: "📊" },
-    ...(s.role === "admin" ? [{ href: "/admin", label: "แอดมิน", icon: "🛠️" }] : []),
+    { href: "/scan", label: "สแกน", Icon: ScanLine },
+    { href: "/overview", label: "ภาพรวม", Icon: BarChart3 },
+    ...(s?.role === "admin" ? [{ href: "/admin", label: "แอดมิน", Icon: ShieldCheck }] : []),
   ];
 
   return (
     <Ctx.Provider value={s}>
-      <header className="sticky top-0 z-20 flex items-center justify-between bg-white/90 px-4 py-2 text-sm backdrop-blur ring-1 ring-black/5">
-        <span className="font-semibold">👕 Freshly69</span>
-        <span className="text-gray-500">
-          {s.role === "admin" ? "แอดมิน" : "สตาฟ"}
-          {s.deviceName ? ` · ${s.deviceName}` : ""}
-          <button onClick={lock} className="ml-3 text-orange-700 underline">ล็อก</button>
-        </span>
+      <header className="sticky top-0 z-20 border-b border-line bg-white/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-md shadow-brand-200">
+              <Shirt size={18} strokeWidth={2.4} />
+            </span>
+            <span className="font-bold tracking-tight">Freshly69</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            {s && (
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${s.role === "admin" ? "bg-ink text-white" : "bg-brand-50 text-brand-700"}`}>
+                {s.role === "admin" ? "แอดมิน" : "สตาฟ"}
+                {s.deviceName ? ` · ${s.deviceName}` : ""}
+              </span>
+            )}
+            <button onClick={lock} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-brand-50" aria-label="ล็อกแอป">
+              <Lock size={17} />
+            </button>
+          </div>
+        </div>
       </header>
-      <main className="mx-auto max-w-2xl px-4 pb-28 pt-4">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t bg-white pb-[env(safe-area-inset-bottom)]">
-        {tabs.map((t) => (
-          <Link key={t.href} href={t.href} className={`flex flex-1 flex-col items-center py-2 text-sm ${path.startsWith(t.href) ? "font-bold text-orange-700" : "text-gray-500"}`}>
-            <span className="text-xl">{t.icon}</span>
-            {t.label}
-          </Link>
-        ))}
+
+      <main className="mx-auto max-w-2xl px-4 pb-32 pt-4">{s ? children : <PageSkeleton />}</main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-30 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="mx-auto flex max-w-md justify-around rounded-2xl border border-line bg-white/95 p-1.5 shadow-[0_12px_32px_-12px_rgb(124_45_18/0.35)] backdrop-blur">
+          {tabs.map(({ href, label, Icon }) => {
+            const on = path.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                prefetch
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-xs font-semibold transition ${on ? "bg-brand-50 text-brand-600" : "text-muted"}`}
+              >
+                <Icon size={21} strokeWidth={on ? 2.5 : 2} />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </Ctx.Provider>
+  );
+}
+
+function PageSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="skeleton h-28" />
+      <div className="skeleton h-48" />
+      <div className="skeleton h-20" />
+    </div>
   );
 }

@@ -44,6 +44,11 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 - `logs` — append-only audit. `devices` — last seen info per device id. `login_attempts` — rate limit.
 - `people` view — one row per student id (latest response, inferred faculty) used for counts.
 
+## Performance notes
+- Vercel functions are pinned to `hnd1` (Tokyo) in vercel.json because the Supabase project is in ap-northeast-1. Keep them in the same region.
+- Audit writes use `after()` so they never delay the response. Settings are cached 15 s per instance.
+- Pages use `useCached` (stale-while-revalidate). Only count data is persisted to sessionStorage; names/phones stay in memory.
+
 ## Known limits
 - Browsers cannot read a hardware id; the device id is random and stored in localStorage (lost if the
   browser data is cleared / incognito).

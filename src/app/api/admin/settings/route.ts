@@ -21,7 +21,7 @@ function publicView(s: Settings) {
 
 export const GET = route(async () => {
   await requireSession("admin");
-  return NextResponse.json(publicView(await getSettings()));
+  return NextResponse.json(publicView(await getSettings(true)));
 });
 
 /** POST any of { adminPin, staffPin, staffPinDaily, askDeviceName, schedule } */

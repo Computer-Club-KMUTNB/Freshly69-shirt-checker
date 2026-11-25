@@ -23,15 +23,24 @@ export const DEFAULT_SETTINGS: Settings = {
   },
 };
 
-export async function getSettings(): Promise<Settings> {
+// Settings are read on almost every request but change rarely → cache per server instance.
+// fresh=true bypasses the cache (unlock + admin settings page, where staleness matters).
+const TTL_MS = 15_000;
+let cache: { at: number; value: Settings } | null = null;
+
+export async function getSettings(fresh = false): Promise<Settings> {
+  if (!fresh && cache && Date.now() - cache.at < TTL_MS) return cache.value;
   const { data, error } = await db().from("settings").select("value").eq("key", "app").maybeSingle();
   if (error) throw error;
-  return { ...DEFAULT_SETTINGS, ...(data?.value ?? {}) };
+  const value = { ...DEFAULT_SETTINGS, ...(data?.value ?? {}) };
+  cache = { at: Date.now(), value };
+  return value;
 }
 
 export async function saveSettings(patch: Partial<Settings>): Promise<Settings> {
-  const next = { ...(await getSettings()), ...patch };
+  const next = { ...(await getSettings(true)), ...patch };
   const { error } = await db().from("settings").upsert({ key: "app", value: next });
   if (error) throw error;
+  cache = { at: Date.now(), value: next };
   return next;
 }

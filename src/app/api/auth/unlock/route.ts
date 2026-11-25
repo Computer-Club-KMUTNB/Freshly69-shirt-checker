@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
 import { constantTimeEqual, dailyPin, isSixDigits, verifyPin } from "@/lib/pin";
 import { COOKIE, HttpError, clientInfo, route, signSession, writeLog, type Role } from "@/lib/session";
@@ -22,17 +22,15 @@ export const POST = route(async (req: Request) => {
 
   const { ip, userAgent } = await clientInfo();
   const since = new Date(Date.now() - LOCK_MINUTES * 60_000).toISOString();
-  const { count } = await db()
-    .from("login_attempts")
-    .select("id", { count: "exact", head: true })
-    .eq("ip", ip)
-    .eq("ok", false)
-    .gte("at", since);
+  // rate-limit check and settings in parallel (one round trip instead of two)
+  const [{ count }, settings] = await Promise.all([
+    db().from("login_attempts").select("id", { count: "exact", head: true }).eq("ip", ip).eq("ok", false).gte("at", since),
+    getSettings(true),
+  ]);
   if ((count ?? 0) >= MAX_FAILS) {
     throw new HttpError(429, `ใส่รหัสผิดเกิน ${MAX_FAILS} ครั้ง รอ ${LOCK_MINUTES} นาทีแล้วลองใหม่`);
   }
 
-  const settings = await getSettings();
   let role: Role | null = null;
   if (isSixDigits(pin)) {
     const adminOk = settings.adminPinHash
@@ -49,7 +47,9 @@ export const POST = route(async (req: Request) => {
     }
   }
 
-  await db().from("login_attempts").insert({ ip, ok: !!role });
+  after(async () => {
+    await db().from("login_attempts").insert({ ip, ok: !!role });
+  });
   if (!role) {
     await writeLog({ deviceId, deviceName }, "unlock_fail");
     throw new HttpError(401, "รหัสไม่ถูกต้อง");
@@ -60,10 +60,12 @@ export const POST = route(async (req: Request) => {
   if (settings.askDeviceName && !deviceName) throw new HttpError(400, "กรุณาใส่ชื่อเล่น/ชื่อโต๊ะ");
 
   const session = { role, deviceId, deviceName };
-  await db().from("devices").upsert(
-    { device_id: deviceId, name: deviceName, role, user_agent: userAgent, ip, last_seen: new Date().toISOString() },
-    { onConflict: "device_id" },
-  );
+  after(async () => {
+    await db().from("devices").upsert(
+      { device_id: deviceId, name: deviceName, role, user_agent: userAgent, ip, last_seen: new Date().toISOString() },
+      { onConflict: "device_id" },
+    );
+  });
   await writeLog(session, "unlock");
 
   const exp = nextBangkokMidnight();

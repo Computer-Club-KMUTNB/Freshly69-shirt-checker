@@ -1,7 +1,7 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies, headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "./db";
 import { getSettings } from "./settings";
 import { isOpen } from "./time";
@@ -65,12 +65,26 @@ export async function requireSession(role: Role = "staff"): Promise<Session> {
   return s;
 }
 
+/**
+ * Append an audit log line. The insert runs AFTER the response is sent (next/server `after`),
+ * so logging never slows down the phone. Request headers are read now, before responding.
+ */
 export async function writeLog(
   s: Partial<Session> | null,
   action: string,
   extra: { studentId?: string | null; faculty?: string | null; detail?: Record<string, unknown> } = {},
 ) {
   const { ip, userAgent } = await clientInfo();
+  after(() => insertLog(s, action, extra, ip, userAgent));
+}
+
+async function insertLog(
+  s: Partial<Session> | null,
+  action: string,
+  extra: { studentId?: string | null; faculty?: string | null; detail?: Record<string, unknown> },
+  ip: string,
+  userAgent: string,
+) {
   const { error } = await db().from("logs").insert({
     action,
     role: s?.role ?? null,

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Thai } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
-const thai = Noto_Sans_Thai({ variable: "--font-thai", subsets: ["thai", "latin"], weight: ["400", "600", "700"] });
+const thai = IBM_Plex_Sans_Thai({ variable: "--font-thai", subsets: ["thai", "latin"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "Freshly69 แจกเสื้อ",

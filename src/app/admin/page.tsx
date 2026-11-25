@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import { ACTION_LABEL, FACULTY_KEYS, ISSUE_LABEL } from "@/lib/constants";
 import { api } from "@/lib/client";
+import { useCached } from "@/lib/useCached";
 import { fmtDateTime } from "@/lib/time";
 
 const TABS = [
@@ -19,9 +20,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("pending");
   return (
     <Shell adminOnly>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`btn shrink-0 px-3 py-1.5 text-sm ${tab === t.key ? "bg-orange-600 text-white" : "btn-ghost"}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`chip ${tab === t.key ? "chip-on" : ""}`}>
             {t.label}
           </button>
         ))}
@@ -36,19 +37,21 @@ export default function AdminPage() {
   );
 }
 
+/** In-memory stale-while-revalidate (names/phones are never written to storage). */
 function useLoad<T>(url: string | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState("");
-  const reload = useCallback(() => {
-    if (!url) return;
-    setError("");
-    api<T>(url).then(setData).catch((e) => setError(e.message));
-  }, [url]);
-  useEffect(reload, [reload]);
-  return { data, error, reload, setData };
+  const { data, error, reload, setData, loading } = useCached<T>(url);
+  return { data: data ?? null, error, reload, setData: (d: T) => setData(d), loading };
 }
 
-const Err = ({ e }: { e: string }) => (e ? <p className="rounded-lg bg-red-50 p-3 text-red-700">{e}</p> : null);
+function ListSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-16" />)}
+    </div>
+  );
+}
+
+const Err = ({ e }: { e: string }) => (e ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{e}</p> : null);
 
 // ---------- not received yet (names + phones, admin only) ----------
 interface PendingRow { student_id: string; title: string | null; full_name: string; faculty: string; size: string; phone: string | null; issue_type: string }
@@ -61,20 +64,21 @@ function Pending() {
   const tel = (p: string | null) => (p ?? "").replace(/[^\d+]/g, "");
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">🔒 ข้อมูลส่วนบุคคล — ใช้ติดตามน้องเท่านั้น ห้ามแคปหรือส่งต่อ (ทุกการเปิดหน้านี้ถูกบันทึก)</p>
-      <select className="input" value={faculty} onChange={(e) => setFaculty(e.target.value)}>
+      <p className="rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">🔒 ข้อมูลส่วนบุคคล — ใช้ติดตามน้องเท่านั้น ห้ามแคปหรือส่งต่อ (ทุกการเปิดหน้านี้ถูกบันทึก)</p>
+      <select className="input appearance-none" value={faculty} onChange={(e) => setFaculty(e.target.value)}>
         {FACULTY_KEYS.map((f) => <option key={f}>{f}</option>)}
       </select>
       <input className="input" placeholder="ค้นหาชื่อ / รหัส / เบอร์" value={q} onChange={(e) => setQ(e.target.value)} />
       <Err e={error} />
-      <div className="text-sm text-gray-500">ยังไม่รับ {rows.length.toLocaleString()} คน</div>
+      {!data && !error && <ListSkeleton />}
+      <div className="text-sm text-muted">ยังไม่รับ {rows.length.toLocaleString()} คน</div>
       {rows.map((r) => (
         <div key={r.student_id} className="card flex items-center justify-between gap-3 py-3">
           <div className="min-w-0">
             <div className="truncate font-semibold">{r.title}{r.full_name}</div>
-            <div className="font-mono text-xs text-gray-500">{r.student_id} · ไซส์ {r.size}{r.issue_type !== "none" ? ` · ⚠️ ${ISSUE_LABEL[r.issue_type]}` : ""}</div>
+            <div className="font-mono text-xs text-muted">{r.student_id} · ไซส์ {r.size}{r.issue_type !== "none" ? ` · ⚠️ ${ISSUE_LABEL[r.issue_type]}` : ""}</div>
           </div>
-          {r.phone ? <a href={`tel:${tel(r.phone)}`} className="btn btn-ghost shrink-0 px-3 py-2 text-sm">📞 {r.phone}</a> : <span className="text-xs text-gray-400">ไม่มีเบอร์</span>}
+          {r.phone ? <a href={`tel:${tel(r.phone)}`} className="btn btn-soft shrink-0 px-3 py-2 text-sm">📞 {r.phone}</a> : <span className="text-xs text-muted">ไม่มีเบอร์</span>}
         </div>
       ))}
     </div>
@@ -97,13 +101,13 @@ function Issues() {
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
         {(["open", "done", "all"] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={`btn px-3 py-1.5 text-sm ${filter === f ? "bg-orange-600 text-white" : "btn-ghost"}`}>
+          <button key={f} onClick={() => setFilter(f)} className={`chip ${filter === f ? "chip-on" : ""}`}>
             {{ open: "ยังไม่แก้", done: "แก้แล้ว", all: "ทั้งหมด" }[f]}
           </button>
         ))}
       </div>
       <Err e={error} />
-      <p className="text-sm text-gray-500">&ldquo;แก้แล้ว&rdquo; = แจกเสื้อผ่านหน้าสแกนแล้ว ระบบติ๊กให้อัตโนมัติ ({groups.length} รายการ)</p>
+      <p className="text-sm text-muted">&ldquo;แก้แล้ว&rdquo; = แจกเสื้อผ่านหน้าสแกนแล้ว ระบบติ๊กให้อัตโนมัติ ({groups.length} รายการ)</p>
       {groups.map((g) => (
         <div key={g.studentId} className="card flex flex-col gap-2">
           <div className="flex justify-between">
@@ -111,12 +115,12 @@ function Issues() {
             <span className="text-sm">{g.distribution ? "✅ แก้แล้ว" : "⏳ ยังไม่แก้"} · {ISSUE_LABEL[g.issueType]}</span>
           </div>
           {g.rows.map((r) => (
-            <div key={r.id} className={`rounded-lg p-2 text-sm ${g.distribution?.student_row_id === r.id ? "bg-green-50" : "bg-gray-50"}`}>
+            <div key={r.id} className={`rounded-lg p-2 text-sm ${g.distribution?.student_row_id === r.id ? "bg-emerald-50" : "bg-brand-50/50"}`}>
               <b>{r.title}{r.full_name}</b> · ไซส์ <b>{r.size}</b> · ฟอร์ม {r.form_faculty} · {fmtDateTime(r.submitted_at)} · {r.phone}
             </div>
           ))}
           {g.distribution && (
-            <div className="text-xs text-gray-500">แจกไซส์ {g.distribution.size} ที่โต๊ะ {g.distribution.faculty} เมื่อ {fmtDateTime(g.distribution.created_at)} {g.distribution.device_name ? `โดย ${g.distribution.device_name}` : ""}</div>
+            <div className="text-xs text-muted">แจกไซส์ {g.distribution.size} ที่โต๊ะ {g.distribution.faculty} เมื่อ {fmtDateTime(g.distribution.created_at)} {g.distribution.device_name ? `โดย ${g.distribution.device_name}` : ""}</div>
           )}
         </div>
       ))}
@@ -139,7 +143,7 @@ function Recent() {
       {(data ?? []).map((r) => (
         <div key={r.id} className={`card py-3 text-sm ${r.voided_at ? "opacity-50 line-through" : ""}`}>
           <div className="flex justify-between"><b>{r.students?.title}{r.students?.full_name}</b><span className="font-bold">{r.size}</span></div>
-          <div className="text-xs text-gray-500">{r.student_id} · {r.faculty} · {fmtDateTime(r.created_at)} · {r.device_name ?? "-"}{r.voided_at ? " · ยกเลิกแล้ว" : ""}</div>
+          <div className="text-xs text-muted">{r.student_id} · {r.faculty} · {fmtDateTime(r.created_at)} · {r.device_name ?? "-"}{r.voided_at ? " · ยกเลิกแล้ว" : ""}</div>
         </div>
       ))}
     </div>
@@ -188,18 +192,18 @@ function Logs() {
       <Err e={error} />
       <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
         <table className="w-full min-w-[640px] text-xs">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-brand-50/50 text-left text-muted">
             <tr><th className="p-2">เวลา</th><th>การกระทำ</th><th>ผล</th><th>รหัส นศ.</th><th>คณะ</th><th>เครื่อง</th><th>IP</th></tr>
           </thead>
           <tbody>
             {rows.map((l) => (
               <tr key={l.id} className="border-t align-top">
                 <td className="whitespace-nowrap p-2">{fmtDateTime(l.at)}</td>
-                <td>{ACTION_LABEL[l.action] ?? l.action}<div className="text-gray-400">{l.role}</div></td>
+                <td>{ACTION_LABEL[l.action] ?? l.action}<div className="text-muted">{l.role}</div></td>
                 <td>{l.detail ? String(l.detail.result ?? l.detail.size ?? (l.detail.changed as string[] | undefined)?.join(",") ?? "") : ""}</td>
                 <td className="font-mono">{l.student_id}</td>
                 <td>{l.faculty}</td>
-                <td title={l.user_agent ?? ""}>{l.device_name ?? "-"}<div className="font-mono text-gray-400">{l.device_id}</div></td>
+                <td title={l.user_agent ?? ""}>{l.device_name ?? "-"}<div className="font-mono text-muted">{l.device_id}</div></td>
                 <td className="font-mono">{l.ip}</td>
               </tr>
             ))}
@@ -219,12 +223,12 @@ function Devices() {
   return (
     <div className="flex flex-col gap-2">
       <Err e={error} />
-      <p className="text-sm text-gray-500">รหัสเครื่องสร้างจากเบราว์เซอร์ตอนปลดล็อกครั้งแรก (เว็บอ่านหมายเลขเครื่องจริงไม่ได้)</p>
+      <p className="text-sm text-muted">รหัสเครื่องสร้างจากเบราว์เซอร์ตอนปลดล็อกครั้งแรก (เว็บอ่านหมายเลขเครื่องจริงไม่ได้)</p>
       {(data ?? []).map((d) => (
         <div key={d.device_id} className="card py-3 text-sm">
           <div className="flex justify-between"><b>{d.name ?? "(ไม่ได้ตั้งชื่อ)"}</b><span className="font-mono">{d.device_id}</span></div>
-          <div className="text-xs text-gray-500">{d.role} · IP {d.ip} · เห็นครั้งแรก {fmtDateTime(d.first_seen)} · ล่าสุด {fmtDateTime(d.last_seen)}</div>
-          <div className="truncate text-xs text-gray-400">{d.user_agent}</div>
+          <div className="text-xs text-muted">{d.role} · IP {d.ip} · เห็นครั้งแรก {fmtDateTime(d.first_seen)} · ล่าสุด {fmtDateTime(d.last_seen)}</div>
+          <div className="truncate text-xs text-muted">{d.user_agent}</div>
         </div>
       ))}
     </div>
@@ -274,12 +278,12 @@ function SettingsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {msg && <p className="rounded-lg bg-green-50 p-3 text-green-800">{msg}</p>}
+      {msg && <p className="rounded-lg bg-emerald-50 p-3 text-green-800">{msg}</p>}
       <Err e={err} />
 
       <section className="card flex flex-col gap-3">
         <h3 className="font-semibold">รหัสแอดมิน</h3>
-        <p className="text-sm text-gray-500">{data.adminPinSet ? "ตั้งในระบบแล้ว" : "ยังใช้ค่า ADMIN_PIN จาก Vercel — ควรตั้งใหม่ที่นี่"}</p>
+        <p className="text-sm text-muted">{data.adminPinSet ? "ตั้งในระบบแล้ว" : "ยังใช้ค่า ADMIN_PIN จาก Vercel — ควรตั้งใหม่ที่นี่"}</p>
         <div className="flex gap-2">{pinInput(adminPin, setAdminPin)}<button className="btn btn-ghost shrink-0" disabled={adminPin.length !== 6} onClick={() => saveSettings({ adminPin })}>เปลี่ยน</button></div>
       </section>
 
@@ -292,12 +296,12 @@ function SettingsTab() {
         {data.staffPinDaily && data.dailyPins ? (
           <div className="grid grid-cols-2 gap-2 text-center">
             {Object.entries(data.dailyPins).map(([d, p], i) => (
-              <div key={d} className="rounded-xl bg-gray-50 p-3"><div className="text-xs text-gray-500">{i === 0 ? "วันนี้" : "พรุ่งนี้"} {d}</div><div className="font-mono text-2xl font-bold tracking-widest">{p}</div></div>
+              <div key={d} className="rounded-xl bg-brand-50/50 p-3"><div className="text-xs text-muted">{i === 0 ? "วันนี้" : "พรุ่งนี้"} {d}</div><div className="font-mono text-2xl font-bold tracking-widest">{p}</div></div>
             ))}
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-500">{data.staffPinSet ? "ตั้งในระบบแล้ว (ใช้รหัสเดิมทุกวัน)" : "ยังใช้ค่า STAFF_PIN จาก Vercel"}</p>
+            <p className="text-sm text-muted">{data.staffPinSet ? "ตั้งในระบบแล้ว (ใช้รหัสเดิมทุกวัน)" : "ยังใช้ค่า STAFF_PIN จาก Vercel"}</p>
             <div className="flex gap-2">{pinInput(staffPin, setStaffPin)}<button className="btn btn-ghost shrink-0" disabled={staffPin.length !== 6} onClick={() => saveSettings({ staffPin })}>เปลี่ยน</button></div>
           </>
         )}
