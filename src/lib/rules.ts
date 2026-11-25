@@ -28,6 +28,7 @@ export interface ActiveDistribution {
 export type LookupResult =
   | { result: "invalid"; studentId: string }
   | { result: "not_found"; studentId: string }
+  | { result: "not_freshman"; studentId: string; candidates: Candidate[] }
   | { result: "received"; studentId: string; distribution: ActiveDistribution; candidates: Candidate[] }
   | { result: "wrong_faculty"; studentId: string; correctFaculty: string; selectedFaculty: string; candidates: Candidate[] }
   | { result: "ok" | "dup_same" | "dup_size" | "dup_person"; studentId: string; faculty: string; candidates: Candidate[] };
@@ -41,6 +42,10 @@ export interface Candidate {
   formFaculty: string;
   submittedAt: string | null;
 }
+
+/** Only freshmen (student id starts with the entry year 69) can receive a shirt. */
+export const FRESHMAN_PREFIX = "69";
+export const isFreshman = (studentId: string) => studentId.startsWith(FRESHMAN_PREFIX);
 
 /** Pull a 13-digit student id out of whatever the scanner/keyboard produced. */
 export function normalizeStudentId(raw: string): string | null {
@@ -68,7 +73,7 @@ export function toCandidates(rows: StudentRow[]): Candidate[] {
 
 /**
  * Decide what the scan screen shows. Order matters:
- * invalid → not found → already received → wrong faculty → ok / duplicate warnings.
+ * invalid → not found → not a freshman (id not 69…) → already received → wrong faculty → ok / duplicate warnings.
  */
 export function evaluate(
   rawId: string,
@@ -81,6 +86,7 @@ export function evaluate(
   const mine = rows.filter((r) => r.student_id === studentId);
   if (mine.length === 0) return { result: "not_found", studentId };
   const candidates = toCandidates(mine);
+  if (!isFreshman(studentId)) return { result: "not_freshman", studentId, candidates };
   if (active) return { result: "received", studentId, distribution: active, candidates };
   const faculty = correctFaculty(mine);
   if (faculty !== selectedFaculty) {
@@ -105,6 +111,7 @@ export function validateConfirm(
 ): { ok: true; rowId: number; size: string; faculty: string } | { ok: false; error: string } {
   if (lookup.result === "invalid") return { ok: false, error: "รหัสนักศึกษาไม่ถูกต้อง" };
   if (lookup.result === "not_found") return { ok: false, error: "ไม่มีข้อมูลนี้ในระบบ" };
+  if (lookup.result === "not_freshman") return { ok: false, error: "ไม่ใช่นักศึกษาปี 1 (รหัสไม่ได้ขึ้นต้นด้วย 69)" };
   if (lookup.result === "received") return { ok: false, error: "คนนี้รับเสื้อไปแล้ว" };
   if (lookup.result === "wrong_faculty") {
     return { ok: false, error: `ต้องไปรับที่คณะ ${lookup.correctFaculty}` };

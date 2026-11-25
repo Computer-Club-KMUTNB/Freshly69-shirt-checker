@@ -14,7 +14,7 @@
 import ExcelJS from "exceljs";
 import { createClient } from "@supabase/supabase-js";
 import { FACULTY_KEYS } from "../src/lib/constants";
-import { classifyGroup, normalizeStudentId, type IssueType } from "../src/lib/rules";
+import { classifyGroup, isFreshman, normalizeStudentId, type IssueType } from "../src/lib/rules";
 
 const COL = { time: 1, email: 2, title: 3, name: 4, id: 5, phone: 8, size: 10 };
 
@@ -116,6 +116,7 @@ async function main() {
   console.log(`issues: dup_same ${count("dup_same")}, dup_size ${count("dup_size")}, dup_person ${count("dup_person")}`);
   console.log("prefix → faculty:", Object.fromEntries(prefixMap));
   console.log(`rows without id_faculty: ${rows.filter((r) => !r.id_faculty).length}`);
+  console.log(`not freshmen (id not 69…, cannot receive): ${[...byId.keys()].filter((id) => !isFreshman(id)).length} people`);
   if (problems.length) console.log("notes:\n  " + problems.slice(0, 30).join("\n  ") + (problems.length > 30 ? `\n  ... +${problems.length - 30}` : ""));
 
   if (dry) {

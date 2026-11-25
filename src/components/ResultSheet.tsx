@@ -122,6 +122,17 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
         </Banner>
       );
       break;
+    case "not_freshman":
+      body = (
+        <>
+          <Banner tone="red">
+            <div className="text-lg font-bold">⛔ ไม่ใช่นักศึกษาปี 1 — แจกไม่ได้</div>
+            รหัสขึ้นต้นด้วย <b>{r.studentId.slice(0, 2)}</b> (ต้องเป็น 69) หากเกิดข้อผิดพลาดโปรดติดต่อสตาฟ
+          </Banner>
+          {latest && <Person c={latest} studentId={r.studentId} />}
+        </>
+      );
+      break;
     case "received":
       body = (
         <>

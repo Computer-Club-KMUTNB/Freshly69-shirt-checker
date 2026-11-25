@@ -35,6 +35,8 @@ on Vercel, Supabase Postgres. See README for setup.
 - Staff picks the faculty desk before scanning. Faculty mismatch → blocked, tell student to go to
   the right faculty. Correct faculty = inferred from student-id prefix (import script learns the
   mapping, needs ≥5 samples & ≥80% majority), else the form they filled.
+- Only freshmen: student id must start with `69` (`FRESHMAN_PREFIX` in rules.ts). Others → `not_freshman`
+  popup, cannot receive, and are excluded from counts / pending list (SQL `like '69%'`).
 - Scan/search is logged immediately, but the shirt counts as given **only after ยืนยันแจก**.
 - After confirm: success message + [แก้ไข] (voids the distribution, re-opens the card, no time
   limit) + [เสร็จสิ้น] (back to camera, camera stays open).

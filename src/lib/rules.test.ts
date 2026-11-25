@@ -30,6 +30,15 @@ describe("normalizeStudentId", () => {
 describe("evaluate (popup shown after scan)", () => {
   it("invalid input", () => expect(evaluate("123", [], null, "วทอ").result).toBe("invalid"));
   it("not found", () => expect(evaluate(ID, [], null, "วทอ").result).toBe("not_found"));
+  it("non-69 id is blocked even if it is in the list", () => {
+    const old = "6803000000001";
+    const r = evaluate(old, [row({ student_id: old })], null, "วทอ");
+    expect(r.result).toBe("not_freshman");
+    expect(validateConfirm(r, {}).ok).toBe(false);
+  });
+  it("non-69 id that is not in the list is simply not found", () => {
+    expect(evaluate("6803000000001", [], null, "วทอ").result).toBe("not_found");
+  });
   it("already received wins over everything", () => expect(evaluate(ID, [row()], given, "วิศวะ").result).toBe("received"));
   it("wrong faculty is blocked and names the right one", () => {
     const r = evaluate(ID, [row()], null, "วิศวะ");

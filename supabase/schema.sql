@@ -87,7 +87,7 @@ alter table settings       enable row level security;
 alter table login_attempts enable row level security;
 
 -- One row per real person (student_id). For duplicates we keep the LATEST response and the faculty
--- inferred from the student id.
+-- inferred from the student id. Only freshmen (id starts with 69) count — others cannot receive a shirt.
 create or replace view people with (security_invoker = true) as
 select distinct on (student_id)
   student_id,
@@ -96,6 +96,7 @@ select distinct on (student_id)
   size,
   case title when 'นาย' then 'M' when 'นางสาว' then 'F' else 'U' end as gender
 from students
+where student_id like '69%'
 order by student_id, submitted_at desc nulls last;
 
 -- All numbers for the overview page in one call (counts only, no names).
@@ -126,7 +127,7 @@ select json_build_object(
                    count(distinct s.student_id)::int as n,
                    count(distinct s.student_id) filter (where d.student_id is not null)::int as resolved
             from students s left join d using (student_id)
-            where s.issue_type <> 'none' group by 1) i)
+            where s.issue_type <> 'none' and s.student_id like '69%' group by 1) i)
 );
 $$;
 
@@ -138,7 +139,8 @@ select coalesce(json_agg(x order by x.faculty, x.student_id), '[]'::json) from (
     s.student_id, s.title, s.full_name, coalesce(s.id_faculty, s.form_faculty) as faculty,
     s.size, s.phone, s.issue_type
   from students s
-  where not exists (select 1 from distributions d where d.student_id = s.student_id and d.voided_at is null)
+  where s.student_id like '69%'
+    and not exists (select 1 from distributions d where d.student_id = s.student_id and d.voided_at is null)
     and (p_faculty is null or coalesce(s.id_faculty, s.form_faculty) = p_faculty)
   order by s.student_id, s.submitted_at desc nulls last
 ) x;
