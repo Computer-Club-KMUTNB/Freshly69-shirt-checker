@@ -5,7 +5,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BarcodeDetector } from "barcode-detector/ponyfill";
 import { Flashlight, FlashlightOff, Keyboard, Loader2, SwitchCamera, X, ZoomIn } from "lucide-react";
 import { normalizeStudentId } from "@/lib/rules";
-import { backCameras } from "@/lib/cameras";
+import { backCameras, pickMainCamera } from "@/lib/cameras";
+
+const LENS_KEY = "f69_lens";
+const savedLens = (): string | undefined => {
+  try {
+    return localStorage.getItem(LENS_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+const saveLens = (id?: string) => {
+  try {
+    if (id) localStorage.setItem(LENS_KEY, id);
+  } catch {}
+};
 
 interface Props {
   /** Called once per card. Scanning pauses while `paused` is true (result sheet open). */
@@ -63,13 +77,19 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
       stop();
       setError("");
       try {
-        const deviceId = camIndex >= 0 ? cameras[camIndex]?.deviceId : undefined;
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: deviceId
-            ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-            : { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        });
+        // first open: try the lens this phone used last time; otherwise let the browser pick a rear one
+        const deviceId = camIndex >= 0 ? cameras[camIndex]?.deviceId : savedLens();
+        const size = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: deviceId ? { deviceId: { exact: deviceId }, ...size } : { facingMode: { ideal: "environment" }, ...size },
+          });
+        } catch (e) {
+          if (!deviceId || camIndex >= 0) throw e;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, ...size } });
+        }
         if (cancelled) return stream.getTracks().forEach((t) => t.stop());
         streamRef.current = stream;
         const v = videoRef.current!;
@@ -86,11 +106,14 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
           const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
           const back = backCameras(all);
           setCameras(back);
-          // start the lens cycle from the camera the browser picked, so the first tap really switches
+          // switch to the main / sharpest rear lens if the browser opened a different one
           const current = (t.getSettings() as any).deviceId;
+          const best = pickMainCamera(back, savedLens());
           const i = back.findIndex((d) => d.deviceId === current);
-          if (i >= 0) {
-            skipRestartRef.current = true;
+          if (best >= 0 && back[best].deviceId !== current) {
+            setCamIndex(best); // restarts the stream on that lens
+          } else if (i >= 0) {
+            skipRestartRef.current = true; // already on it, just sync the index
             setCamIndex(i);
           }
         }
@@ -158,7 +181,9 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
 
   function switchLens() {
     if (cameras.length < 2) return; // only rear lenses are in the list
-    setCamIndex((i) => (i + 1) % cameras.length);
+    const next = (camIndex + 1) % cameras.length;
+    saveLens(cameras[next]?.deviceId); // remember this choice for next time on this phone
+    setCamIndex(next);
   }
 
   async function changeZoom(z: number) {
