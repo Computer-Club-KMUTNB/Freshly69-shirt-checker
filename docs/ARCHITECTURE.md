@@ -36,6 +36,7 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 | `GET /api/admin/pending?faculty=` | admin | names + phones (view is logged) |
 | `GET /api/admin/issues` · `recent` · `logs` · `devices` | admin | |
 | `GET/POST /api/admin/settings` | admin | PINs are stored hashed; never logged |
+| `POST /api/admin/reset` | admin | `{confirm:"เริ่มใหม่"}` → deletes distributions, logs, devices, login_attempts (keeps students + settings); logs a `reset` line |
 
 ## Data model
 - `students` — one row per form response (duplicates allowed). `issue_type` none/dup_same/dup_size/dup_person.

@@ -53,6 +53,8 @@ export async function api<T = unknown>(url: string, init?: { method?: string; bo
   if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/") {
     window.location.href = "/";
   }
+  // 403 = this browser's login changed role (e.g. staff unlocked in another tab) → let Shell re-check.
+  if (res.status === 403 && typeof window !== "undefined") window.dispatchEvent(new Event("f69:recheck-session"));
   if (!res.ok) throw new ApiError(res.status, data.error ?? "เกิดข้อผิดพลาด", data);
   return data as T;
 }

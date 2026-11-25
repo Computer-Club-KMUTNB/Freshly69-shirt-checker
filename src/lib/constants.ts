@@ -1,14 +1,14 @@
 // Faculty keys are the sheet names of Freshly69-shirt-checker.xlsx. They are stored as-is in the DB.
 export const FACULTIES = [
-  { key: "วิศวะ", label: "วิศวกรรมศาสตร์" },
-  { key: "สถาปัต", label: "สถาปัตยกรรมและการออกแบบ" },
-  { key: "วิทยา", label: "วิทยาศาสตร์ประยุกต์" },
+  { key: "วิศวะ", label: "คณะวิศวกรรมศาสตร์" },
+  { key: "สถาปัต", label: "คณะสถาปัตยกรรมและการออกแบบ" },
+  { key: "วิทยา", label: "คณะวิทยาศาสตร์ประยุกต์" },
   { key: "วทอ", label: "วิทยาลัยเทคโนโลยีอุตสาหกรรม" },
-  { key: "พัฒอุต", label: "พัฒนาธุรกิจและอุตสาหกรรม" },
+  { key: "พัฒอุต", label: "คณะพัฒนาธุรกิจและอุตสาหกรรม" },
   { key: "นานาชาติ", label: "วิทยาลัยนานาชาติ" },
-  { key: "เทคโนโลยีสารสนเทศ", label: "เทคโนโลยีสารสนเทศและนวัตกรรมดิจิทัล" },
-  { key: "ครุ", label: "ครุศาสตร์อุตสาหกรรม" },
-  { key: "TGGS", label: "TGGS" },
+  { key: "เทคโนโลยีสารสนเทศ", label: "คณะเทคโนโลยีสารสนเทศและนวัตกรรมดิจิทัล" },
+  { key: "ครุ", label: "คณะครุศาสตร์อุตสาหกรรม" },
+  { key: "TGGS", label: "บัณฑิตวิทยาลัยวิศวกรรมศาสตร์นานาชาติสิรินธร ไทย-เยอรมัน (TGGS)" },
 ] as const;
 
 export type FacultyKey = (typeof FACULTIES)[number]["key"];
@@ -32,6 +32,10 @@ export const ACTION_LABEL: Record<string, string> = {
   void: "ยกเลิก/แก้ไข",
   view_pending: "เปิดรายชื่อยังไม่รับ",
   settings: "แก้การตั้งค่า",
+  reset: "เริ่มใหม่ (ล้างข้อมูลทดสอบ)",
 };
 
 export const TIMEZONE = "Asia/Bangkok";
+
+/** Word the admin must type to wipe test data (Settings → เริ่มใหม่). */
+export const RESET_WORD = "เริ่มใหม่";

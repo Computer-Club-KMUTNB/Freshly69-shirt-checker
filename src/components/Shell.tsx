@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { BarChart3, Lock, ScanLine, Shirt, ShieldCheck } from "lucide-react";
+import { BarChart3, LogOut, ScanLine, Shirt, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/client";
 
 export interface SessionInfo {
@@ -38,20 +38,33 @@ export default function Shell({ children, adminOnly = false }: { children: React
   useEffect(() => {
     const c = cachedSession();
     if (c && !(adminOnly && c.role !== "admin")) setS(c);
-    api<{ session: SessionInfo | null }>("/api/auth/me")
-      .then(({ session }) => {
-        if (!session) {
-          sessionStorage.removeItem(KEY);
-          router.replace("/");
-        } else if (adminOnly && session.role !== "admin") router.replace("/scan");
-        else {
-          sessionStorage.setItem(KEY, JSON.stringify(session));
-          setS(session);
-        }
-      })
-      .catch(() => {
-        /* offline: keep the cached session; API calls will show their own errors */
-      });
+
+    const check = () =>
+      api<{ session: SessionInfo | null }>("/api/auth/me")
+        .then(({ session }) => {
+          if (!session) {
+            sessionStorage.removeItem(KEY);
+            router.replace("/");
+          } else {
+            sessionStorage.setItem(KEY, JSON.stringify(session));
+            setS(session);
+            if (adminOnly && session.role !== "admin") router.replace("/scan");
+          }
+        })
+        .catch(() => {
+          /* offline: keep the cached session; API calls will show their own errors */
+        });
+
+    check();
+    // The login cookie is shared by every tab of this browser: unlocking as staff in another tab
+    // replaces an admin login. Re-check whenever this tab comes back into view.
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("f69:recheck-session", check);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("f69:recheck-session", check);
+    };
   }, [router, adminOnly]);
 
   async function lock() {
@@ -85,14 +98,18 @@ export default function Shell({ children, adminOnly = false }: { children: React
                 {s.deviceName ? ` · ${s.deviceName}` : ""}
               </span>
             )}
-            <button onClick={lock} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-brand-50" aria-label="ล็อกแอป">
-              <Lock size={17} />
+            <button
+              onClick={lock}
+              className="flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-muted transition hover:bg-brand-50 active:scale-95"
+              aria-label="ออกจากระบบ"
+            >
+              <LogOut size={15} /> ออก
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pb-32 pt-4">{s ? children : <PageSkeleton />}</main>
+      <main className="mx-auto w-full min-w-0 max-w-2xl px-4 pb-32 pt-4">{s ? children : <PageSkeleton />}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         <div className="mx-auto flex max-w-md justify-around rounded-2xl border border-line bg-white/95 p-1.5 shadow-[0_12px_32px_-12px_rgb(124_45_18/0.35)] backdrop-blur">

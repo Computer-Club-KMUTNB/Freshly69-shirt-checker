@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BarcodeDetector } from "barcode-detector/ponyfill";
 import { Flashlight, FlashlightOff, Keyboard, Loader2, SwitchCamera, X, ZoomIn } from "lucide-react";
 import { normalizeStudentId } from "@/lib/rules";
+import { backCameras } from "@/lib/cameras";
 
 interface Props {
   /** Called once per card. Scanning pauses while `paused` is true (result sheet open). */
@@ -33,6 +34,7 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
   const detectorRef = useRef<BarcodeDetector | null>(null);
   const pausedRef = useRef(paused);
   const lastRef = useRef<{ code: string; n: number }>({ code: "", n: 0 });
+  const skipRestartRef = useRef(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [camIndex, setCamIndex] = useState(-1); // -1 = let the browser pick the back camera
   const [caps, setCaps] = useState<any>({});
@@ -52,6 +54,10 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
 
   // start / restart the camera when the chosen lens changes
   useEffect(() => {
+    if (skipRestartRef.current) {
+      skipRestartRef.current = false; // camIndex was only synced to the running camera
+      return;
+    }
     let cancelled = false;
     (async () => {
       stop();
@@ -78,7 +84,15 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
         // device labels are only available after permission is granted
         if (cameras.length === 0) {
           const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
-          setCameras(all);
+          const back = backCameras(all);
+          setCameras(back);
+          // start the lens cycle from the camera the browser picked, so the first tap really switches
+          const current = (t.getSettings() as any).deviceId;
+          const i = back.findIndex((d) => d.deviceId === current);
+          if (i >= 0) {
+            skipRestartRef.current = true;
+            setCamIndex(i);
+          }
         }
       } catch (e) {
         setError(
@@ -143,7 +157,7 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
   }
 
   function switchLens() {
-    if (cameras.length < 2) return;
+    if (cameras.length < 2) return; // only rear lenses are in the list
     setCamIndex((i) => (i + 1) % cameras.length);
   }
 
@@ -226,7 +240,7 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
         <CtrlButton onClick={toggleTorch} disabled={!hasTorch} active={torch} label={hasTorch ? (torch ? "ปิดแฟลช" : "แฟลช") : "ไม่มีแฟลช"}>
           {torch ? <FlashlightOff size={24} /> : <Flashlight size={24} />}
         </CtrlButton>
-        <CtrlButton onClick={switchLens} disabled={cameras.length < 2} label="เปลี่ยนเลนส์" title={lensName}>
+        <CtrlButton onClick={switchLens} disabled={cameras.length < 2} label="เลนส์หลัง" title={lensName}>
           <SwitchCamera size={24} />
         </CtrlButton>
         <CtrlButton onClick={onManual} label="พิมพ์รหัส">

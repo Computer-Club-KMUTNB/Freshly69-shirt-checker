@@ -21,6 +21,15 @@
   color-scheme: light;
 }
 
+/* Nothing may make the page wider than the phone: a wide table (Log tab) used to widen the page,
+   so the page scrolled sideways and the fixed bottom bar slid with it. Wide content scrolls inside
+   its own box instead. `clip` (not `hidden`) keeps position: sticky working. */
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   background: #fffaf6;
   color: var(--color-ink);

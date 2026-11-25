@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Camera, Keyboard, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Camera, ChevronRight, Keyboard, Loader2, Search } from "lucide-react";
 import Shell from "@/components/Shell";
 import ResultSheet from "@/components/ResultSheet";
 import { FACULTIES } from "@/lib/constants";
@@ -32,14 +32,26 @@ function ScanScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const [lastFaculty, setLastFaculty] = useState("");
+
   useEffect(() => {
-    setFaculty(store("f69_faculty", ""));
+    setLastFaculty(store("f69_faculty", "")); // highlight only; staff always picks the desk first
     import("@/components/Scanner"); // warm the camera bundle so the button opens instantly
   }, []);
 
   function pickFaculty(f: string) {
     setFaculty(f);
+    setLastFaculty(f);
     save("f69_faculty", f);
+    setError("");
+  }
+
+  function changeFaculty() {
+    setCamera(false);
+    setManual(false);
+    setTyped("");
+    setError("");
+    setFaculty("");
   }
 
   const run = useCallback(
@@ -74,7 +86,7 @@ function ScanScreen() {
       <div className="relative flex-1">
         <Keyboard size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
         <input
-          className="input pl-11 font-mono tracking-wider"
+          className={`input pl-11 ${typed ? "font-mono tracking-wider" : ""}`}
           inputMode="numeric"
           placeholder="รหัสนักศึกษา 13 หลัก"
           value={typed}
@@ -94,41 +106,61 @@ function ScanScreen() {
 
   return (
     <div className="flex flex-col gap-4">
-      <section>
-        <div className="mb-2 flex items-baseline justify-between px-1">
-          <h2 className="font-bold">โต๊ะคณะ</h2>
-          <span className="text-xs text-muted">เลือกคณะที่กำลังแจก</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {FACULTIES.map((f) => (
-            <button key={f.key} onClick={() => pickFaculty(f.key)} className={`chip py-2.5 ${faculty === f.key ? "chip-on" : ""}`} title={f.label}>
-              {short(f.key)}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-brand-500 via-brand-500 to-brand-600 p-5 text-white shadow-[0_20px_40px_-20px_rgb(234_88_12/0.8)]">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-16 -left-6 h-40 w-40 rounded-full bg-white/10" />
-        <div className="relative">
-          <div className="text-sm text-white/80">{faculty ? "กำลังแจก" : "ยังไม่ได้เลือกคณะ"}</div>
-          <div className="text-xl font-bold leading-tight">{facultyLabel ?? "เลือกคณะด้านบนก่อน"}</div>
-          <button
-            className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-5 text-xl font-bold text-brand-600 shadow-lg transition active:scale-[0.98] disabled:opacity-60"
-            disabled={!faculty}
-            onClick={() => setCamera(true)}
-          >
-            <Camera size={28} strokeWidth={2.4} /> เปิดกล้องสแกน
+      {!faculty ? (
+        <section className="animate-sheet flex flex-col gap-3">
+          <div className="px-1">
+            <h2 className="text-xl font-bold">เลือกคณะที่จะแจก</h2>
+            <p className="text-sm text-muted">ระบบจะตรวจว่าน้องที่สแกนอยู่คณะนี้</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {FACULTIES.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => pickFaculty(f.key)}
+                className={`flex items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left transition active:scale-[0.98] ${lastFaculty === f.key ? "border-brand-300 ring-2 ring-brand-100" : "border-line"}`}
+              >
+                <span>
+                  <span className="block font-bold">{short(f.key)}</span>
+                  <span className="block text-xs text-muted">{f.label}</span>
+                </span>
+                <span className="flex items-center gap-2 text-xs text-brand-600">
+                  {lastFaculty === f.key && "ใช้ล่าสุด"}
+                  <ChevronRight size={20} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <>
+          <button onClick={changeFaculty} className="flex w-fit items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-semibold text-muted active:bg-brand-50">
+            <ArrowLeft size={16} /> เปลี่ยนคณะ
           </button>
-        </div>
-      </section>
 
-      <section className="card">
-        <div className="mb-2 text-sm font-semibold text-muted">หรือพิมพ์รหัส (สำรอง)</div>
-        {faculty ? manualForm() : <p className="text-sm text-muted">เลือกคณะก่อนจึงจะค้นหาได้</p>}
-        {error && !result && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      </section>
+          <section className="animate-sheet relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-[0_20px_40px_-20px_rgb(194_65_12/0.9)]">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-16 -left-6 h-40 w-40 rounded-full bg-white/10" />
+            <div className="relative">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-700 shadow-sm">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> กำลังแจก
+              </span>
+              <div className="mt-4 text-3xl font-bold leading-snug tracking-tight drop-shadow-sm">{facultyLabel}</div>
+              <button
+                className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-6 text-xl font-bold text-brand-600 shadow-lg transition active:scale-[0.98]"
+                onClick={() => setCamera(true)}
+              >
+                <Camera size={30} strokeWidth={2.4} /> เปิดกล้องสแกน
+              </button>
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="mb-2 text-sm font-semibold text-muted">ค้นหารหัสนักศึกษา</div>
+            {manualForm()}
+            {error && !result && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          </section>
+        </>
+      )}
 
       {camera && faculty && (
         <Scanner
