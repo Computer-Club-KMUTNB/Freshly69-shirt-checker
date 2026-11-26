@@ -47,7 +47,7 @@ export default function UnlockPage() {
     try {
       if (name) save("f69_device_name", name.trim());
       const r = await api<{ role: string; deviceName: string | null }>("/api/auth/unlock", {
-        body: { pin: code, deviceId: getDeviceId(), deviceName: name.trim() || null },
+        body: { pin: code, deviceId: getDeviceId(), deviceName: me?.askDeviceName ? name.trim() || null : null },
       });
       sessionStorage.setItem("f69_session_cache", JSON.stringify({ role: r.role, deviceId: getDeviceId(), deviceName: r.deviceName }));
       router.replace("/scan");

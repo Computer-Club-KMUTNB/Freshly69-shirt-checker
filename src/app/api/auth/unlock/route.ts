@@ -53,7 +53,9 @@ export const POST = route(async (req: Request) => {
   if (settings.askDeviceName && !nickname) throw new HttpError(400, "กรุณาใส่ชื่อเล่น");
 
   // "ชื่อเล่น (ชื่อรหัส)" — either part may be missing
-  const deviceName = nickname && label ? `${nickname} (${label})` : (nickname ?? label);
+  // nickname only counts while the admin has the nickname field switched on (an old saved one is ignored)
+  const nick = settings.askDeviceName ? nickname : null;
+  const deviceName = nick && label ? `${nick} (${label})` : (nick ?? label);
   const session = { role, deviceId, deviceName, pinId };
 
   const exp = nextBangkokMidnight();
