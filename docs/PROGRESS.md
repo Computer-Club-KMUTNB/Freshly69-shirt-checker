@@ -18,6 +18,12 @@ MVP เขียนครบทุกหน้าแล้ว — `npm run check
 - 39 แถวที่ระบบเดาคณะจากรหัสไม่ได้ (prefix มีข้อมูลน้อย) → ใช้คณะจากฟอร์มที่กรอก
 
 ## History
+### 2026-11-26 — ย้ายไป Supabase ของชมรม (Singapore)
+- โปรเจกต์ใหม่ใน org ชมรม (ap-southeast-1) · รัน schema.sql + test-mode.sql · นำเข้ารายชื่อ 5,577 แถว (5,476 คนที่นับ, รหัสซ้ำ 25/6/1)
+- Supabase โปรเจกต์ใหม่ไม่ให้สิทธิ์ service_role อัตโนมัติ → เพิ่ม GRANT ท้าย schema.sql / test-mode.sql
+- vercel.json regions → sin1 · ต้องเปลี่ยน SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY ใน Vercel ให้ตรงกันก่อน deploy
+- การตั้งค่า (รหัส PIN ในรายการ, วันเวลา) ยังไม่ได้ย้าย — ตอนนี้ใช้ ADMIN_PIN / STAFF_PIN จาก Vercel ได้
+
 ### 2026-11-26 — รหัสตั้งต้น (Vercel) ลบไม่ได้
 - ADMIN_PIN / STAFF_PIN เอาปุ่มลบออก ปิด/เปิดได้อย่างเดียว · API ตอบ 400 ถ้าสั่งลบ
 - ค่าเก่า "removed" ใน settings อ่านเป็น "ปิด" → รหัสตั้งต้นที่เคยลบจะกลับมาในรายการแบบปิดอยู่ เปิดใหม่ได้

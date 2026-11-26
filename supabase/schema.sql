@@ -151,3 +151,14 @@ revoke all on function get_pending(text) from public, anon, authenticated;
 revoke all on people from anon, authenticated;
 
 -- Test mode tables live in supabase/test-mode.sql (run that file too).
+
+-- Newer Supabase projects no longer grant table access to service_role automatically
+-- (error 42501 "permission denied"). The app's server uses service_role, so grant it explicitly.
+-- anon / authenticated get nothing (RLS + no grants).
+grant usage on schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+alter default privileges in schema public grant select, insert, update, delete on tables to service_role;
+alter default privileges in schema public grant usage, select on sequences to service_role;
+alter default privileges in schema public grant execute on functions to service_role;

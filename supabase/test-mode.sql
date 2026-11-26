@@ -35,3 +35,7 @@ create unique index if not exists test_distributions_one_active
 
 alter table test_cases         enable row level security;
 alter table test_distributions enable row level security;
+
+-- service_role needs explicit grants on newer Supabase projects (see schema.sql)
+grant select, insert, update, delete on test_cases, test_distributions to service_role;
+grant usage, select on all sequences in schema public to service_role;

@@ -60,7 +60,7 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 - `people` view — one row per student id (latest response, inferred faculty) used for counts.
 
 ## Performance notes
-- Vercel functions are pinned to `hnd1` (Tokyo) in vercel.json because the Supabase project is in ap-northeast-1. Keep them in the same region.
+- Vercel functions are pinned to `sin1` (Singapore) in vercel.json because the club Supabase project is in ap-southeast-1. Keep them in the same region (moved from hnd1/Tokyo on 2026-11-26 with the move to the club Supabase).
 - Audit writes use `after()` so they never delay the response. Settings are cached 15 s per instance.
 - Pages use `useCached` (stale-while-revalidate). Only count data is persisted to sessionStorage; names/phones stay in memory.
 
