@@ -8,17 +8,28 @@ import { FACULTIES } from "@/lib/constants";
 const short = (k: string) => (k === "เทคโนโลยีสารสนเทศ" ? "ไอที" : k);
 
 /** "คณะ: …" button that opens a popup list of faculties (+ "ทั้งหมด"). value "" = all faculties. */
-export default function FacultyPicker({ value, onChange, allowAll = true }: { value: string; onChange: (f: string) => void; allowAll?: boolean }) {
+export default function FacultyPicker({
+  value,
+  onChange,
+  allowAll = true,
+  compact = false,
+}: {
+  value: string;
+  onChange: (f: string) => void;
+  allowAll?: boolean;
+  /** smaller field without the "คณะ:" prefix (when the form already labels it) */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const options = [...(allowAll ? [{ key: "", label: "ทุกคณะ" }] : []), ...FACULTIES];
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="input flex items-center justify-between gap-2 text-left text-base">
+      <button type="button" onClick={() => setOpen(true)} className={`${compact ? "input-sm" : "input text-base"} flex items-center justify-between gap-2 text-left`}>
         <span className="min-w-0 truncate">
-          <span className="text-muted">คณะ: </span>
+          {!compact && <span className="text-muted">คณะ: </span>}
           <b>{value ? FACULTIES.find((f) => f.key === value)?.label ?? value : "ทุกคณะ"}</b>
         </span>
-        <ChevronDown size={18} className="shrink-0 text-muted" />
+        <ChevronDown size={compact ? 16 : 18} className="shrink-0 text-muted" />
       </button>
 
       {open && (

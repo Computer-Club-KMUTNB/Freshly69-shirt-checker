@@ -86,7 +86,7 @@ function Cases({ onScan }: { onScan: () => void }) {
         <div className="flex items-center gap-2 font-bold"><Sparkles size={18} className="text-brand-500" /> สร้างข้อมูลทดสอบอัตโนมัติ</div>
         <p className="text-sm text-muted">สร้างคนปลอม 8 คน ครบทุกปัญหา (รหัสขึ้นต้น 6999 ไม่ซ้ำคนจริง) ให้อยู่คณะที่เลือก — กดซ้ำ = สร้างชุดใหม่แทนชุดเดิม</p>
         <div className="flex gap-2">
-          <select className="input py-2.5 text-base" value={genFaculty} onChange={(e) => setGenFaculty(e.target.value)}>
+          <select className="input-sm" value={genFaculty} onChange={(e) => setGenFaculty(e.target.value)}>
             {FACULTIES.map((f) => <option key={f.key} value={f.key}>{short(f.key)} — {f.label}</option>)}
           </select>
           <button className="btn btn-primary shrink-0" disabled={!!busy} onClick={() => act("gen", () => api("/api/test/generate", { body: { faculty: genFaculty } }), "สร้างข้อมูลอัตโนมัติแล้ว ✓")}>
@@ -189,7 +189,7 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
           <Label>รหัสนักศึกษา (13 หลัก) — ใส่รหัสบัตรของตัวเองได้</Label>
           <div className="flex gap-2">
             <input
-              className="input font-mono tracking-wider"
+              className="input-sm font-mono tracking-wider"
               inputMode="numeric"
               maxLength={13}
               placeholder="เช่น บัตรปี 3 ของสตาฟ"
@@ -204,7 +204,7 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
         <div className="grid grid-cols-[7rem_1fr] gap-2">
           <div>
             <Label>คำนำหน้า</Label>
-            <select className="input text-base" value={f.title ?? ""} onChange={(e) => set("title", e.target.value)}>
+            <select className="input-sm" value={f.title ?? ""} onChange={(e) => set("title", e.target.value)}>
               <option value="นาย">นาย</option>
               <option value="นางสาว">นางสาว</option>
               <option value="">(ไม่มี)</option>
@@ -212,7 +212,7 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
           </div>
           <div>
             <Label>ชื่อ-สกุล</Label>
-            <input className="input text-base" value={f.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} placeholder="ใส่ชื่อจริงหรือชื่อสมมติ" />
+            <input className="input-sm" value={f.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} placeholder="ใส่ชื่อจริงหรือชื่อสมมติ" />
           </div>
         </div>
 
@@ -263,7 +263,7 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
         {(p === "dup_same" || p === "dup_person") && (
           <div>
             <Label>{p === "dup_same" ? "ฟอร์มที่ 2 กรอกในคณะ" : "คนที่ 2 กรอกในฟอร์มคณะ"}</Label>
-            <select className="input text-base" value={f.second_faculty ?? ""} onChange={(e) => set("second_faculty", e.target.value)}>
+            <select className="input-sm" value={f.second_faculty ?? ""} onChange={(e) => set("second_faculty", e.target.value)}>
               <option value="">{p === "dup_same" ? "(อัตโนมัติ: คณะอื่น)" : "(คณะเดียวกัน)"}</option>
               {FACULTIES.map((x) => <option key={x.key} value={x.key}>{short(x.key)}</option>)}
             </select>
@@ -282,12 +282,12 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
         {p === "dup_person" && (
           <div>
             <Label>ชื่อคนที่ 2</Label>
-            <input className="input text-base" value={f.second_name ?? ""} onChange={(e) => set("second_name", e.target.value)} placeholder="เช่น สมหญิง ทดสอบ" />
+            <input className="input-sm" value={f.second_name ?? ""} onChange={(e) => set("second_name", e.target.value)} placeholder="เช่น สมหญิง ทดสอบ" />
           </div>
         )}
 
         {err && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
-        <button className="btn btn-primary py-4 text-lg" disabled={busy} onClick={submit}>{busy ? "กำลังบันทึก..." : "บันทึก"}</button>
+        <button className="btn btn-primary py-3" disabled={busy} onClick={submit}>{busy ? "กำลังบันทึก..." : "บันทึก"}</button>
       </BottomSheet>
 
       {scan && (
@@ -313,7 +313,7 @@ function Editor({ initial, onClose, onSaved }: { initial: Partial<TestCase>; onC
 function BarcodeSheet({ c, onClose }: { c: TestCase; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
-      <div className="animate-pop w-full max-w-md rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="animate-pop w-full max-w-md rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center justify-between">
           <div className="font-bold">{c.title}{c.full_name}</div>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-muted" aria-label="ปิด"><X size={20} /></button>

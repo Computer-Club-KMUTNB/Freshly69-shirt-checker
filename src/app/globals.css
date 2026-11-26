@@ -37,10 +37,12 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Sizes tuned for one-handed phone use: big enough to tap (≥ 40px), small enough that a screen
+   shows a whole form. Inputs stay at 16px text — anything smaller makes iOS zoom in on focus. */
 @utility card {
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   background: white;
-  padding: 1rem;
+  padding: 0.875rem;
   box-shadow: 0 1px 2px rgb(124 45 18 / 0.04), 0 8px 24px -12px rgb(124 45 18 / 0.12);
   border: 1px solid var(--color-line);
 }
@@ -49,9 +51,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 0.9rem;
-  padding: 0.75rem 1rem;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
   &:active:not(:disabled) { transform: scale(0.97); }
@@ -80,10 +84,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.875rem;
+  padding: 0.375rem 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   border: 1px solid var(--color-line);
@@ -101,11 +105,12 @@ body {
 
 @utility input {
   width: 100%;
-  border-radius: 0.9rem;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
   border: 1.5px solid var(--color-line);
   background: white;
-  padding: 0.75rem 1rem;
-  font-size: 1.0625rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem; /* 16px: no iOS auto-zoom */
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   &:focus { border-color: var(--color-brand-400); box-shadow: 0 0 0 4px var(--color-brand-100); }
@@ -141,3 +146,52 @@ body {
   50% { top: 82%; }
 }
 .animate-scanline { animation: scanline 2.2s ease-in-out infinite; }
+
+/* Segmented control (2–3 big tabs at the top of a page) */
+@utility seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.25rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--color-line);
+  background: white;
+  padding: 0.25rem;
+}
+@utility seg-item {
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  transition: all 0.15s ease;
+}
+@utility seg-on {
+  background: var(--color-brand-600);
+  color: white;
+  box-shadow: 0 4px 12px -6px rgb(234 88 12 / 0.7);
+}
+
+/* Small caption above a field */
+@utility field-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+/* Compact field for dense admin / test forms. 14px text is OK here because the viewport sets
+   maximum-scale=1 (layout.tsx), which stops iOS from zooming in when a field is focused. */
+@utility input-sm {
+  width: 100%;
+  min-height: 2.25rem;
+  border-radius: 0.625rem;
+  border: 1.5px solid var(--color-line);
+  background: white;
+  padding: 0.3rem 0.625rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:focus { border-color: var(--color-brand-400); box-shadow: 0 0 0 3px var(--color-brand-100); }
+}

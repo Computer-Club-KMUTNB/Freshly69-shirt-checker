@@ -136,7 +136,7 @@ export default function ScanScreen({ apiBase = "/api", test = false }: { apiBase
                   facultyRefs.current[f.key] = el;
                 }}
                 onClick={() => pickFaculty(f.key)}
-                className={`flex items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left transition active:scale-[0.98] ${lastFaculty === f.key ? "border-brand-300 ring-2 ring-brand-100" : "border-line"}`}
+                className={`flex items-center justify-between rounded-xl border bg-white px-3.5 py-2.5 text-left transition active:scale-[0.98] ${lastFaculty === f.key ? "border-brand-300 ring-2 ring-brand-100" : "border-line"}`}
               >
                 <span>
                   <span className="block font-bold">{short(f.key)}</span>
@@ -156,19 +156,19 @@ export default function ScanScreen({ apiBase = "/api", test = false }: { apiBase
             <ArrowLeft size={16} /> เปลี่ยนคณะ
           </button>
 
-          <section className="animate-sheet relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-[0_20px_40px_-20px_rgb(194_65_12/0.9)]">
+          <section className="animate-sheet relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_20px_40px_-20px_rgb(194_65_12/0.9)]">
             <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
             <div className="pointer-events-none absolute -bottom-16 -left-6 h-40 w-40 rounded-full bg-white/10" />
             <div className="relative">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-700 shadow-sm">
                 <span className={`h-2 w-2 animate-pulse rounded-full ${test ? "bg-amber-500" : "bg-emerald-500"}`} /> {test ? "กำลังทดสอบ" : "กำลังแจก"}
               </span>
-              <div className="mt-4 text-3xl font-bold leading-snug tracking-tight drop-shadow-sm">{facultyLabel}</div>
+              <div className="mt-3 text-2xl font-bold leading-snug tracking-tight drop-shadow-sm">{facultyLabel}</div>
               <button
-                className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-6 text-xl font-bold text-brand-600 shadow-lg transition active:scale-[0.98]"
+                className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-4 text-lg font-bold text-brand-600 shadow-lg transition active:scale-[0.98]"
                 onClick={() => setCamera(true)}
               >
-                <Camera size={30} strokeWidth={2.4} /> เปิดกล้องสแกน
+                <Camera size={24} strokeWidth={2.4} /> เปิดกล้องสแกน
               </button>
             </div>
           </section>

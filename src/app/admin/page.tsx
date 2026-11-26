@@ -22,9 +22,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("logs");
   return (
     <Shell adminOnly>
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <div className="seg mb-4">
         {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`chip ${tab === t.key ? "chip-on" : ""}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`seg-item ${tab === t.key ? "!bg-brand-600 !text-white shadow" : ""}`}>
             {t.label}
           </button>
         ))}
@@ -122,34 +122,62 @@ function Logs() {
 
   return (
     <div className="flex flex-col gap-3">
-      <section className="card flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2">
-          {([
-            ["today", "วันนี้"],
-            ["yesterday", "เมื่อวาน"],
-            ["all", "ทั้งหมด"],
-          ] as const).map(([k, l]) => (
-            <button key={k} onClick={() => quick(k)} className={`chip ${active === k ? "chip-on" : ""}`}>{l}</button>
-          ))}
+      <section className="card flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-bold">ตัวกรอง</span>
+          <div className="flex gap-1.5">
+            {([
+              ["today", "วันนี้"],
+              ["yesterday", "เมื่อวาน"],
+              ["all", "ทั้งหมด"],
+            ] as const).map(([k, l]) => (
+              <button key={k} onClick={() => quick(k)} className={`chip px-2.5 py-1 text-xs ${active === k ? "chip-on" : ""}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+          <label>
+            <span className="field-label">ตั้งแต่</span>
+            <input type="datetime-local" className="input-sm px-2" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label>
+            <span className="field-label">ถึง</span>
+            <input type="datetime-local" className="input-sm px-2" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+          </label>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs font-semibold text-muted">ตั้งแต่
-            <input type="datetime-local" className="input mt-1 px-2 text-sm" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+          <label>
+            <span className="field-label">การกระทำ</span>
+            <select className="input-sm" value={action} onChange={(e) => setAction(e.target.value)}>
+              <option value="">ทั้งหมด</option>
+              <option value="scan_search">สแกน / ค้นหา</option>
+              <option value="confirm">ยืนยันแจก</option>
+              <option value="void">ยกเลิก/แก้ไข</option>
+            </select>
           </label>
-          <label className="text-xs font-semibold text-muted">ถึง
-            <input type="datetime-local" className="input mt-1 px-2 text-sm" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+          <label>
+            <span className="field-label">รหัสนักศึกษา</span>
+            <input className="input-sm" placeholder="13 หลัก" inputMode="numeric" value={studentId} onChange={(e) => setStudentId(e.target.value.replace(/\D/g, ""))} />
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <select className="input text-base" value={action} onChange={(e) => setAction(e.target.value)}>
-            <option value="">ทั้งหมด</option>
-            <option value="scan_search">สแกน / ค้นหา</option>
-            <option value="confirm">ยืนยันแจก</option>
-            <option value="void">ยกเลิก/แก้ไข</option>
-          </select>
-          <input className="input text-base" placeholder="รหัสนักศึกษา" inputMode="numeric" value={studentId} onChange={(e) => setStudentId(e.target.value.replace(/\D/g, ""))} />
+        <div>
+          <span className="field-label">คณะ</span>
+          <FacultyPicker value={faculty} onChange={setFaculty} compact />
         </div>
-        <FacultyPicker value={faculty} onChange={setFaculty} />
+        {(from || to || action || studentId || faculty) && (
+          <button
+            className="self-end text-xs font-semibold text-brand-700"
+            onClick={() => {
+              setFrom("");
+              setTo("");
+              setAction("");
+              setStudentId("");
+              setFaculty("");
+            }}
+          >
+            ล้างตัวกรอง
+          </button>
+        )}
       </section>
 
       <Err e={error} />
@@ -353,10 +381,10 @@ function PinList({
         </button>
       ) : (
         <div className="flex flex-col gap-2 rounded-2xl border border-brand-200 bg-brand-50/40 p-3">
-          <input className="input text-base" placeholder="ชื่อเจ้าของรหัส เช่น บอส / ทีม A" maxLength={30} value={label} onChange={(e) => setLabel(e.target.value)} />
+          <input className="input-sm" placeholder="ชื่อเจ้าของรหัส เช่น บอส / ทีม A" maxLength={30} value={label} onChange={(e) => setLabel(e.target.value)} />
           <div className="flex gap-2">
             <input
-              className="input font-mono text-xl tracking-[0.35em]"
+              className="input-sm font-mono tracking-[0.3em]"
               inputMode="numeric"
               maxLength={6}
               placeholder="••••••"
@@ -480,8 +508,8 @@ function SettingsTab() {
         <div className="text-sm font-semibold">วันที่เปิดให้สตาฟใช้</div>
         <DateMultiPicker value={days} onChange={setDays} />
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-sm font-semibold">เริ่ม<input type="time" className="input mt-1" value={start} onChange={(e) => setStart(e.target.value)} /></label>
-          <label className="text-sm font-semibold">สิ้นสุด<input type="time" className="input mt-1" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+          <label className="text-sm font-semibold">เริ่ม<input type="time" className="input-sm mt-1" value={start} onChange={(e) => setStart(e.target.value)} /></label>
+          <label className="text-sm font-semibold">สิ้นสุด<input type="time" className="input-sm mt-1" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
         </div>
         <button className="btn btn-primary" onClick={() => saveSettings({ schedule: { enabled: data.schedule.enabled, days, start, end } })}>
           บันทึกวันเวลา
@@ -545,7 +573,7 @@ function ResetSection() {
             </p>
             <label className="text-sm font-semibold">
               พิมพ์ <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-700">{RESET_WORD}</span> เพื่อยืนยัน
-              <input className="input mt-1" value={word} onChange={(e) => setWord(e.target.value)} autoFocus />
+              <input className="input-sm mt-1" value={word} onChange={(e) => setWord(e.target.value)} autoFocus />
             </label>
             {err && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
             <div className="grid grid-cols-2 gap-3">

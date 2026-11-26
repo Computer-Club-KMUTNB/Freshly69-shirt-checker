@@ -131,9 +131,9 @@ export default function Shell({ children, adminOnly = false }: { children: React
                 key={href}
                 href={href}
                 prefetch
-                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-xs font-semibold transition ${on ? "bg-brand-50 text-brand-600" : "text-muted"}`}
+                className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold transition ${on ? "bg-brand-50 text-brand-600" : "text-muted"}`}
               >
-                <Icon size={21} strokeWidth={on ? 2.5 : 2} />
+                <Icon size={20} strokeWidth={on ? 2.5 : 2} />
                 {label}
               </Link>
             );

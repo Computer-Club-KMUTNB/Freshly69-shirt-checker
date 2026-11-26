@@ -25,7 +25,7 @@ function Ring({ value }: { value: number }) {
   const r = 46;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 110 110" className="h-28 w-28 -rotate-90">
+    <svg viewBox="0 0 110 110" className="h-24 w-24 -rotate-90">
       <circle cx="55" cy="55" r={r} fill="none" stroke="rgb(255 255 255 / 0.25)" strokeWidth="11" />
       <circle cx="55" cy="55" r={r} fill="none" stroke="white" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} style={{ transition: "stroke-dashoffset 0.6s ease" }} />
     </svg>
@@ -85,7 +85,7 @@ function Overview() {
     return (
       <div className="flex flex-col gap-4">
         <div className="skeleton h-10" />
-        <div className="skeleton h-40 rounded-[1.75rem]" />
+        <div className="skeleton h-32 rounded-2xl" />
         <div className="grid grid-cols-2 gap-3"><div className="skeleton h-24" /><div className="skeleton h-24" /></div>
         <div className="skeleton h-56" />
         {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -116,21 +116,21 @@ function Overview() {
       </button>
       {showSummary && <SummarySheet raw={raw} onClose={() => setShowSummary(false)} />}
 
-      <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-brand-500 to-brand-600 p-5 text-white shadow-[0_20px_40px_-20px_rgb(234_88_12/0.8)]">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 p-4 text-white shadow-[0_20px_40px_-20px_rgb(234_88_12/0.8)]">
         <div className="pointer-events-none absolute -right-8 -top-12 h-40 w-40 rounded-full bg-white/10" />
-        <div className="relative flex items-center gap-5">
+        <div className="relative flex items-center gap-4">
           <div className="relative">
             <Ring value={pct(s.all)} />
             <div className="absolute inset-0 grid place-items-center">
               <div className="text-center">
-                <div className="text-2xl font-bold leading-none">{pct(s.all)}%</div>
+                <div className="text-xl font-bold leading-none">{pct(s.all)}%</div>
                 <div className="text-[11px] text-white/80">แจกแล้ว</div>
               </div>
             </div>
           </div>
           <div className="flex-1">
             <div className="text-sm text-white/80">{faculty ? `คณะ ${faculty}` : "ทุกคณะ"}</div>
-            <div className="text-4xl font-bold tabular-nums">{n(s.all.received)}<span className="text-lg font-medium text-white/75"> / {n(s.all.total)}</span></div>
+            <div className="text-3xl font-bold tabular-nums">{n(s.all.received)}<span className="text-lg font-medium text-white/75"> / {n(s.all.total)}</span></div>
             <div className="mt-1 text-sm">ยังไม่รับ <b className="text-lg">{n(s.all.remaining)}</b> คน</div>
           </div>
         </div>
@@ -139,11 +139,11 @@ function Overview() {
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted"><Clock size={14} /> แจกวันนี้</div>
-          <div className="mt-1 text-3xl font-bold tabular-nums">{n(todayTotal)}</div>
+          <div className="mt-0.5 text-2xl font-bold tabular-nums">{n(todayTotal)}</div>
         </div>
         <div className="card">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700"><ScanLine size={14} /> สแกนแล้วยังไม่ยืนยัน</div>
-          <div className="mt-1 text-3xl font-bold tabular-nums text-amber-600">{n(raw.pending_scans)}</div>
+          <div className="mt-0.5 text-2xl font-bold tabular-nums text-amber-600">{n(raw.pending_scans)}</div>
         </div>
       </div>
 
@@ -152,7 +152,7 @@ function Overview() {
           {s.byGender.filter((g) => g.key !== "U" || g.total > 0).map((g) => (
             <div key={g.key} className="rounded-2xl bg-brand-50/60 p-3">
               <div className="text-sm font-semibold">{GENDER[g.key] ?? g.key}</div>
-              <div className="text-2xl font-bold tabular-nums text-brand-600">{n(g.remaining)}<span className="text-sm font-medium text-muted"> ยังไม่รับ</span></div>
+              <div className="text-xl font-bold tabular-nums text-brand-600">{n(g.remaining)}<span className="text-sm font-medium text-muted"> ยังไม่รับ</span></div>
               <div className="mt-1.5"><Bar t={g} /></div>
               <div className="mt-1 text-xs text-muted">แจกแล้ว {n(g.received)} / {n(g.total)}</div>
             </div>
@@ -275,10 +275,10 @@ function SummarySheet({ raw, onClose }: { raw: RawStats; onClose: () => void }) 
         {text}
       </pre>
       <div className="grid grid-cols-2 gap-3">
-        <button className="btn btn-primary py-3.5" onClick={copy}>
+        <button className="btn btn-primary py-3" onClick={copy}>
           {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? "คัดลอกแล้ว" : "คัดลอกข้อความ"}
         </button>
-        <button className="btn btn-ghost py-3.5" onClick={download}>
+        <button className="btn btn-ghost py-3" onClick={download}>
           <Download size={18} /> ดาวน์โหลด CSV
         </button>
       </div>

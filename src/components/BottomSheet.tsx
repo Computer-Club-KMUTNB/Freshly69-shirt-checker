@@ -87,8 +87,8 @@ export default function BottomSheet({
     >
       <div
         ref={sheetRef}
-        className={`animate-sheet relative mx-auto flex max-h-[92dvh] w-full max-w-2xl touch-pan-y flex-col gap-3.5 overflow-y-auto rounded-t-[1.75rem] bg-[#fffaf6] p-5 text-ink ${
-          inset ? "pb-5" : "pb-[calc(env(safe-area-inset-bottom)+1.25rem)]"
+        className={`animate-sheet relative mx-auto flex max-h-[92dvh] w-full max-w-2xl touch-pan-y flex-col gap-3 overflow-y-auto rounded-t-3xl bg-[#fffaf6] p-4 text-ink ${
+          inset ? "pb-4" : "pb-[calc(env(safe-area-inset-bottom)+1rem)]"
         } ${className}`}
         style={{
           maxHeight: inset ? `calc(100dvh - ${inset}px - 1rem)` : undefined,
@@ -101,14 +101,14 @@ export default function BottomSheet({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <div data-sheet-handle className="-mx-5 -mt-5 flex shrink-0 cursor-grab justify-center pb-1 pt-3 active:cursor-grabbing" aria-hidden>
+        <div data-sheet-handle className="-mx-4 -mt-4 flex shrink-0 cursor-grab justify-center pb-1 pt-2.5 active:cursor-grabbing" aria-hidden>
           <div className="h-1.5 w-10 rounded-full bg-line" />
         </div>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-muted shadow-sm ring-1 ring-line active:bg-brand-50"
+            className="absolute right-2.5 top-2.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/80 text-muted shadow-sm ring-1 ring-line active:bg-brand-50"
             aria-label="ปิด"
           >
             <X size={18} />

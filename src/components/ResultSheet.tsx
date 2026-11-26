@@ -50,7 +50,7 @@ function Person({ c, studentId, size }: { c: Candidate; studentId: string; size?
       </div>
       <div className="shrink-0 text-center">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">ไซส์</div>
-        <div className="mt-0.5 min-w-[4.5rem] rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 px-3 py-1.5 text-4xl font-bold text-white shadow-lg shadow-brand-200">
+        <div className="mt-0.5 min-w-[4.5rem] rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 px-3 py-1 text-3xl font-bold text-white shadow-lg shadow-brand-200">
           {size ?? c.size}
         </div>
       </div>
@@ -107,19 +107,19 @@ export default function ResultSheet({ apiBase = "/api", lookup, faculty, onReloo
     return (
       <Sheet onClose={busy ? undefined : onDone}>
         <div className="flex flex-col items-center py-2 text-center">
-          <span className="animate-pop grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
+          <span className="animate-pop grid h-14 w-14 place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
             <Check size={36} strokeWidth={3} />
           </span>
-          <div className="mt-3 text-2xl font-bold">ยืนยันแจกเสื้อสำเร็จ</div>
+          <div className="mt-2.5 text-xl font-bold">ยืนยันแจกเสื้อสำเร็จ</div>
           <div className="text-sm text-muted">บันทึกเมื่อ {fmtDateTime(done.created_at)}</div>
         </div>
         {c && <Person c={c} studentId={r.studentId} size={done.size} />}
         {error && <Status tone="red" icon={<AlertTriangle size={18} />} title={error} />}
         <div className="grid grid-cols-[1fr_2fr] gap-3">
-          <button className="btn btn-ghost py-4" onClick={edit} disabled={busy}>
+          <button className="btn btn-ghost py-3" onClick={edit} disabled={busy}>
             {busy ? <Loader2 size={18} className="animate-spin" /> : <Pencil size={18} />} แก้ไข
           </button>
-          <button className="btn btn-primary py-4 text-lg" onClick={onDone} disabled={busy}>
+          <button className="btn btn-primary py-3 text-base" onClick={onDone} disabled={busy}>
             เสร็จสิ้น <ArrowRight size={20} />
           </button>
         </div>
@@ -218,7 +218,7 @@ export default function ResultSheet({ apiBase = "/api", lookup, faculty, onReloo
                 <button
                   key={s}
                   onClick={() => setSize(s)}
-                  className={`btn py-5 text-3xl ${size === s ? "btn-primary" : "btn-ghost"}`}
+                  className={`btn py-3.5 text-2xl ${size === s ? "btn-primary" : "btn-ghost"}`}
                 >
                   {s}
                 </button>
@@ -241,12 +241,12 @@ export default function ResultSheet({ apiBase = "/api", lookup, faculty, onReloo
               <button
                 key={c.rowId}
                 onClick={() => setRowId(c.rowId)}
-                className={`btn justify-between py-4 text-left ${rowId === c.rowId ? "btn-primary" : "btn-ghost"}`}
+                className={`btn justify-between py-3 text-left ${rowId === c.rowId ? "btn-primary" : "btn-ghost"}`}
               >
                 <span>
                   {who(c)} <span className="text-xs opacity-75">({c.formFaculty})</span>
                 </span>
-                <span className="text-2xl">{c.size}</span>
+                <span className="text-xl">{c.size}</span>
               </button>
             ))}
           </div>
@@ -266,11 +266,11 @@ export default function ResultSheet({ apiBase = "/api", lookup, faculty, onReloo
       {body}
       {error && <Status tone="red" icon={<AlertTriangle size={18} />} title={error} />}
       <div className={`grid gap-3 ${showConfirm ? "grid-cols-[1fr_2fr]" : "grid-cols-1"}`}>
-        <button className="btn btn-ghost py-4" onClick={onDone} disabled={busy}>
+        <button className="btn btn-ghost py-3" onClick={onDone} disabled={busy}>
           {showConfirm ? "ยกเลิก" : <>สแกนคนต่อไป <ArrowRight size={18} /></>}
         </button>
         {showConfirm && (
-          <button className="btn py-4 text-lg text-white shadow-lg shadow-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-600" onClick={confirm} disabled={busy || !canConfirm}>
+          <button className="btn py-3 text-base text-white shadow-lg shadow-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-600" onClick={confirm} disabled={busy || !canConfirm}>
             {busy ? <Loader2 size={20} className="animate-spin" /> : <Check size={22} strokeWidth={3} />} {busy ? "กำลังบันทึก..." : "ยืนยันแจก"}
           </button>
         )}

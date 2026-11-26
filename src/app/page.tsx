@@ -73,10 +73,10 @@ export default function UnlockPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-brand-100 via-brand-50 to-transparent" />
 
       <div className="flex flex-col items-center text-center">
-        <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-xl shadow-brand-200">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-xl shadow-brand-200">
           <Shirt size={32} strokeWidth={2.2} />
         </div>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight">Freshly69 แจกเสื้อ</h1>
+        <h1 className="mt-3 text-xl font-bold tracking-tight">Freshly69 แจกเสื้อ</h1>
         <p className="text-sm text-muted">ระบบยืนยันการรับเสื้อ · สำหรับสตาฟ</p>
       </div>
 
@@ -118,7 +118,7 @@ export default function UnlockPage() {
         <span />
         <Key onClick={() => press("0")} disabled={busy}>0</Key>
         <button
-          className="grid h-16 place-items-center rounded-2xl text-muted active:bg-brand-50 disabled:opacity-40"
+          className="grid h-14 place-items-center rounded-xl text-muted active:bg-brand-50 disabled:opacity-40"
           onClick={() => setPin((p) => p.slice(0, -1))}
           disabled={busy || !pin}
           aria-label="ลบ"
@@ -126,7 +126,7 @@ export default function UnlockPage() {
           <Delete size={24} />
         </button>
       </div>
-      <p className="mt-5 text-center text-xs text-muted">ปลดล็อกครั้งเดียวต่อวัน · ระบบบันทึกข้อมูลเครื่องทุกครั้ง</p>
+      <p className="mt-5 text-center text-xs text-muted">ปลดล็อกครั้งเดียวต่อวัน</p>
       <style>{`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}`}</style>
     </main>
   );
@@ -136,7 +136,7 @@ function Key({ children, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) 
   return (
     <button
       {...p}
-      className="h-16 rounded-2xl border border-line bg-white text-2xl font-semibold shadow-sm transition active:scale-95 active:bg-brand-50 disabled:opacity-40"
+      className="h-14 rounded-xl border border-line bg-white text-xl font-semibold shadow-sm transition active:scale-95 active:bg-brand-50 disabled:opacity-40"
     >
       {children}
     </button>

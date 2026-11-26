@@ -38,9 +38,9 @@ export default function Roster() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-line bg-white p-1">
+      <div className="seg">
         {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`rounded-xl py-2 text-sm font-semibold transition ${tab === t.key ? "bg-brand-600 text-white shadow" : "text-muted"}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`seg-item ${tab === t.key ? "!bg-brand-600 !text-white shadow" : ""}`}>
             {t.label}
           </button>
         ))}
