@@ -53,7 +53,7 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 - `students` — one row per form response (duplicates allowed). `issue_type` none/dup_same/dup_size/dup_person.
 - `distributions` — one row per handout; undo = `voided_at`. Partial unique index → max one active per student
   (two phones confirming at once: second gets 409 "เพิ่งถูกยืนยันจากอีกเครื่อง").
-- `logs` — append-only audit: time, action, who (PIN label / nickname + role), faculty, student id, detail.
+- `logs` — append-only audit: time, action, who (PIN name + role), faculty, student id, detail.
   Columns device_id / ip / user_agent still exist but are no longer written (cleared on 2026-11-26).
   Log tab: date-time range + action + student id filters; `src/lib/logtext.ts` turns detail into Thai. `login_attempts` — rate limit.
   `devices` — no longer written (device list page removed).

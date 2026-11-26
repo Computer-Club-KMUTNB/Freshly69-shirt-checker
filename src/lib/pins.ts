@@ -28,6 +28,8 @@ export interface PinSettings {
   staffPins: PinEntry[];
   staffPinDaily: boolean;
   envPins?: { admin?: EnvPinState; staff?: EnvPinState };
+  /** Custom names for the two Vercel env PINs (default: ENV_LABEL). */
+  envLabels?: { admin?: string; staff?: string };
 }
 
 export interface PinEnv {
@@ -51,6 +53,9 @@ export const ENV_ID = { admin: "env:admin", staff: "env:staff" } as const;
 export const ENV_LABEL = { admin: "รหัสตั้งต้น (ADMIN_PIN ใน Vercel)", staff: "รหัสตั้งต้น (STAFF_PIN ใน Vercel)" } as const;
 
 const on = (p: PinEntry) => p.enabled !== false;
+/** Name shown for a Vercel env PIN: the admin's custom name, else the default. */
+export const envLabel = (s: PinSettings, role: Role) => s.envLabels?.[role]?.trim() || ENV_LABEL[role];
+const envMatchLabel = (s: PinSettings, role: Role) => s.envLabels?.[role]?.trim() || null;
 const envState = (s: PinSettings, role: Role): "on" | "off" => (s.envPins?.[role] === "removed" ? "off" : s.envPins?.[role] ?? "on");
 const envValue = (env: PinEnv, role: Role) => (role === "admin" ? env.adminPin : env.staffPin);
 const envUsable = (s: PinSettings, env: PinEnv, role: Role) => {
@@ -63,12 +68,12 @@ const list = (s: PinSettings, role: Role) => (role === "admin" ? s.adminPins : s
 export function matchPin(pin: string, s: PinSettings, env: PinEnv): PinMatch | null {
   if (!isSixDigits(pin)) return null;
   for (const p of s.adminPins) if (on(p) && verifyPin(pin, p.hash)) return { role: "admin", label: p.label, pinId: p.id };
-  if (envUsable(s, env, "admin") && constantTimeEqual(pin, env.adminPin!)) return { role: "admin", label: null, pinId: ENV_ID.admin };
+  if (envUsable(s, env, "admin") && constantTimeEqual(pin, env.adminPin!)) return { role: "admin", label: envMatchLabel(s, "admin"), pinId: ENV_ID.admin };
   if (s.staffPinDaily) {
     return constantTimeEqual(pin, dailyPin(env.secret, env.today)) ? { role: "staff", label: null, pinId: `daily:${env.today}` } : null;
   }
   for (const p of s.staffPins) if (on(p) && verifyPin(pin, p.hash)) return { role: "staff", label: p.label, pinId: p.id };
-  if (envUsable(s, env, "staff") && constantTimeEqual(pin, env.staffPin!)) return { role: "staff", label: null, pinId: ENV_ID.staff };
+  if (envUsable(s, env, "staff") && constantTimeEqual(pin, env.staffPin!)) return { role: "staff", label: envMatchLabel(s, "staff"), pinId: ENV_ID.staff };
   return null;
 }
 
@@ -116,7 +121,7 @@ export function publicPins(role: Role, s: PinSettings, env: PinEnv): PublicPin[]
   const out: PublicPin[] = [];
   const v = envValue(env, role);
   if (v && isSixDigits(v)) {
-    out.push({ id: ENV_ID[role], label: ENV_LABEL[role], createdAt: null, enabled: envState(s, role) === "on", env: true, revealable: true });
+    out.push({ id: ENV_ID[role], label: envLabel(s, role), createdAt: null, enabled: envState(s, role) === "on", env: true, revealable: true });
   }
   for (const p of list(s, role)) out.push({ id: p.id, label: p.label, createdAt: p.createdAt, enabled: on(p), env: false, revealable: !!p.enc });
   return out;
@@ -130,4 +135,24 @@ export function revealPin(role: Role, id: string, s: PinSettings, env: PinEnv): 
   }
   const p = list(s, role).find((x) => x.id === id);
   return p?.enc ? decryptPin(p.enc, env.secret) : null;
+}
+
+export const MAX_LABEL = 30;
+
+/** Rename a PIN (list entry or Vercel env PIN). Returns the settings fields to save. Throws a Thai message. */
+export function renamePin(role: Role, id: string, label: string, s: PinSettings): Partial<PinSettings> {
+  const name = label.trim().slice(0, MAX_LABEL);
+  if (!name) throw new Error("ใส่ชื่อรหัส");
+  if (id === ENV_ID[role]) return { envLabels: { ...s.envLabels, [role]: name } };
+  const l = list(s, role);
+  if (!l.some((p) => p.id === id)) throw new Error("ไม่พบรหัสนี้");
+  const updated = l.map((p) => (p.id === id ? { ...p, label: name } : p));
+  return role === "admin" ? { adminPins: updated } : { staffPins: updated };
+}
+
+/** Current name of the PIN a session was opened with (so a rename shows up without logging in again). */
+export function currentPinLabel(role: Role, pinId: string | undefined, s: PinSettings): string | null {
+  if (!pinId || pinId.startsWith("daily:")) return null;
+  if (pinId === ENV_ID[role]) return envMatchLabel(s, role);
+  return list(s, role).find((p) => p.id === pinId)?.label ?? null;
 }

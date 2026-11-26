@@ -38,7 +38,7 @@ on Vercel, Supabase Postgres. See README for setup.
   (Older single-PIN settings are migrated automatically.) Two roles (admin / staff). Unlock once per day (cookie expires at Bangkok
   midnight). Admin can switch staff PIN to "changes daily" (derived from SESSION_SECRET).
   5 wrong PINs per IP → 5 min lock.
-- No per-person accounts. Logs keep only: time, action, who (PIN label / nickname + role), faculty,
+- No per-person accounts. Logs keep only: time, action, who (PIN name + role — no nickname field; admins name the PINs), faculty,
   student id, result. NO device id / IP / browser (owner: not needed). Pending-list views are not logged.
   login_attempts keeps IP for the 5-min lockout and is pruned after 1 day. The "devices" list page was removed (owner: not useful); the `devices` table is unused.
 - Staff picks the faculty desk before scanning. Faculty mismatch → blocked, tell student to go to

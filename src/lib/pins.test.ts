@@ -114,3 +114,27 @@ describe("reveal (admin 'show PIN' button)", () => {
     expect(revealPin("staff", ENV_ID.admin, settings(), env)).toBeNull();
   });
 });
+
+describe("renamePin (edit admin / staff names)", () => {
+  it("renames a list PIN and the unlock label follows", async () => {
+    const { renamePin, currentPinLabel } = await import("./pins");
+    const s = settings({ staffPins: [entry("333333", "โต๊ะ 1")] });
+    const next = { ...s, ...renamePin("staff", "โต๊ะ 1", "  Staff ECE  ", s) };
+    expect(next.staffPins[0].label).toBe("Staff ECE");
+    expect(matchPin("333333", next, env)?.label).toBe("Staff ECE");
+    expect(currentPinLabel("staff", "โต๊ะ 1", next)).toBe("Staff ECE");
+  });
+  it("renames a Vercel env PIN", async () => {
+    const { renamePin, currentPinLabel, publicPins: pub } = await import("./pins");
+    const s = settings();
+    const next = { ...s, ...renamePin("admin", ENV_ID.admin, "JR", s) };
+    expect(pub("admin", next, env)[0].label).toBe("JR");
+    expect(matchPin("999999", next, env)?.label).toBe("JR");
+    expect(currentPinLabel("admin", ENV_ID.admin, next)).toBe("JR");
+  });
+  it("rejects an empty name or unknown PIN", async () => {
+    const { renamePin } = await import("./pins");
+    expect(() => renamePin("staff", "x", "   ", settings())).toThrow();
+    expect(() => renamePin("staff", "nope", "A", settings())).toThrow("ไม่พบ");
+  });
+});

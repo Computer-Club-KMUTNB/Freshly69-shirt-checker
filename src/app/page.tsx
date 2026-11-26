@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, Delete, Loader2, Shirt } from "lucide-react";
-import { api, getDeviceId, save, store } from "@/lib/client";
+import { api, getDeviceId } from "@/lib/client";
 
 interface Me {
   session: { role: string; deviceId: string; deviceName: string | null } | null;
-  askDeviceName: boolean;
   open: boolean;
 }
 
@@ -16,7 +15,6 @@ export default function UnlockPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
   const [pin, setPin] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [shake, setShake] = useState(false);
@@ -25,7 +23,6 @@ export default function UnlockPage() {
     if (new URLSearchParams(window.location.search).get("out") === "pin") {
       setError("ออกจากระบบแล้ว — รหัสที่ใช้อยู่ถูกปิด/ลบ หรือหมดอายุ กรุณาปลดล็อกใหม่");
     }
-    setName(store("f69_device_name", ""));
     api<Me>("/api/auth/me")
       .then((m) => {
         if (m.session) {
@@ -38,16 +35,11 @@ export default function UnlockPage() {
   }, [router]);
 
   async function unlock(code: string) {
-    if (me?.askDeviceName && !name.trim()) {
-      setError("ใส่ชื่อเล่นก่อน");
-      return;
-    }
     setBusy(true);
     setError("");
     try {
-      if (name) save("f69_device_name", name.trim());
       const r = await api<{ role: string; deviceName: string | null }>("/api/auth/unlock", {
-        body: { pin: code, deviceId: getDeviceId(), deviceName: me?.askDeviceName ? name.trim() || null : null },
+        body: { pin: code, deviceId: getDeviceId(), },
       });
       sessionStorage.setItem("f69_session_cache", JSON.stringify({ role: r.role, deviceId: getDeviceId(), deviceName: r.deviceName }));
       router.replace("/scan");
@@ -79,13 +71,6 @@ export default function UnlockPage() {
         <h1 className="mt-3 text-xl font-bold tracking-tight">Freshly69 แจกเสื้อ</h1>
         <p className="text-sm text-muted">ระบบยืนยันการรับเสื้อ · สำหรับสตาฟ</p>
       </div>
-
-      {me?.askDeviceName && (
-        <label className="mt-7 flex flex-col gap-1.5">
-          <span className="text-sm font-semibold">ชื่อเล่น</span>
-          <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="เช่น บอส" />
-        </label>
-      )}
 
       <div className="mt-7 text-center text-sm font-semibold text-muted">ใส่รหัสปลดล็อก 6 หลัก</div>
       <div className="mt-3 flex justify-center gap-3" style={shake ? { animation: "shake 0.35s" } : undefined}>

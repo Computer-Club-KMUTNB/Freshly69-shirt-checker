@@ -10,8 +10,9 @@ export interface Settings {
   staffPins: PinEntry[];
   /** ADMIN_PIN / STAFF_PIN from Vercel: on, off, or removed from the list. */
   envPins: { admin?: EnvPinState; staff?: EnvPinState };
+  /** Custom names for the Vercel env PINs. */
+  envLabels?: { admin?: string; staff?: string };
   staffPinDaily: boolean; // true → one staff PIN that changes every day (derived, shown to admin)
-  askDeviceName: boolean; // ask for a nickname on unlock (logged with every action)
   schedule: Schedule;
 }
 
@@ -20,7 +21,6 @@ export const DEFAULT_SETTINGS: Settings = {
   staffPins: [],
   envPins: {},
   staffPinDaily: false,
-  askDeviceName: true,
   schedule: {
     enabled: false,
     days: ["2026-12-02", "2026-12-03", "2026-12-04", "2026-12-08", "2026-12-09"],

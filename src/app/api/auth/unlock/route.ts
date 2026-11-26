@@ -9,7 +9,7 @@ const MAX_FAILS = 5;
 const LOCK_MINUTES = 5;
 
 /**
- * POST { pin, deviceId, deviceName? } → sets a session cookie valid until midnight (Bangkok).
+ * POST { pin, deviceId } → sets a session cookie valid until midnight (Bangkok).
  * Any of the admin / staff PINs in Settings works; the PIN's label (e.g. "ทีม A") is shown in the
  * header and written to every log line, so the admin can see who did what.
  */
@@ -17,7 +17,6 @@ export const POST = route(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
   const pin = String(body.pin ?? "");
   const deviceId = String(body.deviceId ?? "").slice(0, 64);
-  const nickname = body.deviceName ? String(body.deviceName).trim().slice(0, 40) : null;
   if (!deviceId) throw new HttpError(400, "ไม่มีรหัสเครื่อง");
 
   const { ip } = await clientInfo();
@@ -50,13 +49,12 @@ export const POST = route(async (req: Request) => {
   if (role === "staff" && !isOpen(settings.schedule)) {
     throw new HttpError(403, "ระบบปิดอยู่ (นอกวัน/เวลาแจกเสื้อ)");
   }
-  if (settings.askDeviceName && !nickname) throw new HttpError(400, "กรุณาใส่ชื่อเล่น");
 
   // "ชื่อเล่น (ชื่อรหัส)" — either part may be missing
-  // nickname only counts while the admin has the nickname field switched on (an old saved one is ignored)
-  const nick = settings.askDeviceName ? nickname : null;
+  // no nickname any more: "who" is the PIN's name, which the admin sets in Settings
+  const nick = null;
   const deviceName = nick && label ? `${nick} (${label})` : (nick ?? label);
-  const session = { role, deviceId, deviceName, pinId };
+  const session = { role, deviceId, deviceName, pinId, nick };
 
   const exp = nextBangkokMidnight();
   const res = NextResponse.json({ role, deviceName });

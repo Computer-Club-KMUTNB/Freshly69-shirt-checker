@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse, after } from "next/server";
 import { db } from "./db";
 import { getSettings } from "./settings";
-import { pinStillValid } from "./pins";
+import { currentPinLabel, pinStillValid } from "./pins";
 import { bangkokDate, isOpen } from "./time";
 
 export type Role = "admin" | "staff";
@@ -15,6 +15,8 @@ export interface Session {
   deviceName: string | null;
   /** Which PIN opened this session (see pins.ts). Removing / switching it off logs the user out. */
   pinId?: string;
+  /** Nickname typed at unlock (deviceName = "nick (PIN name)"), kept so a PIN rename shows up at once. */
+  nick?: string | null;
 }
 
 export const COOKIE = "f69_session";
@@ -43,6 +45,7 @@ export async function readSession(): Promise<Session | null> {
       deviceId: String(payload.deviceId),
       deviceName: (payload.deviceName as string) ?? null,
       pinId: (payload.pinId as string) ?? undefined,
+      nick: (payload.nick as string) ?? null,
     };
   } catch {
     return null;
@@ -72,7 +75,13 @@ export async function validSession(): Promise<Session | null> {
     secret: process.env.SESSION_SECRET!,
     today: bangkokDate(),
   });
-  return ok ? s : null;
+  if (!ok) return null;
+  // show the PIN's current name (admins can rename PINs while people are logged in)
+  if (s.nick !== undefined) {
+    const label = currentPinLabel(s.role, s.pinId, settings);
+    s.deviceName = s.nick && label ? `${s.nick} (${label})` : (s.nick ?? label);
+  }
+  return s;
 }
 
 /** Use at the top of every API route. Admin passes every check. Staff is blocked outside opening hours. */

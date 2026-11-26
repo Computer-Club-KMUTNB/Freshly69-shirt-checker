@@ -6,7 +6,7 @@ import { ACTION_LABEL, RESET_WORD } from "@/lib/constants";
 import { api } from "@/lib/client";
 import { useCached } from "@/lib/useCached";
 import { describeLog } from "@/lib/logtext";
-import { AlertTriangle, Copy, Dices, Eye, EyeOff, Loader2, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Dices, Eye, EyeOff, Loader2, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import DateMultiPicker from "@/components/DateMultiPicker";
 import FacultyPicker from "@/components/FacultyPicker";
 import BottomSheet from "@/components/BottomSheet";
@@ -277,7 +277,6 @@ interface SettingsView {
   adminPins: PinInfo[];
   staffPins: PinInfo[];
   staffPinDaily: boolean;
-  askDeviceName: boolean;
   schedule: { enabled: boolean; days: string[]; start: string; end: string };
   dailyPins: Record<string, string> | null;
 }
@@ -321,6 +320,13 @@ function PinList({
   onSave: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  async function rename(id: string) {
+    const ok = await onSave({ renamePin: { role, id, label: editName } });
+    if (ok) setEditId(null);
+  }
   const [pin, setPin] = useState("");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
@@ -351,7 +357,38 @@ function PinList({
         {pins.map((p) => (
           <div key={p.id} className={`flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition ${p.enabled ? "border-line bg-white" : "border-dashed border-gray-300 bg-gray-50"}`}>
             <div className="min-w-0 flex-1">
-              <div className={`truncate font-semibold ${p.enabled ? "" : "text-muted line-through"}`}>{p.label}</div>
+              {editId === p.id ? (
+                <form
+                  className="flex items-center gap-1.5"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    rename(p.id);
+                  }}
+                >
+                  <input className="input-sm min-w-0 flex-1" autoFocus maxLength={30} value={editName} onChange={(e) => setEditName(e.target.value)} />
+                  <button className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white disabled:opacity-40" disabled={!editName.trim()} aria-label="บันทึกชื่อ">
+                    <Check size={16} />
+                  </button>
+                  <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted active:bg-brand-50" onClick={() => setEditId(null)} aria-label="ยกเลิก">
+                    <X size={16} />
+                  </button>
+                </form>
+              ) : (
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className={`truncate font-semibold ${p.enabled ? "" : "text-muted line-through"}`}>{p.label}</span>
+                  <button
+                    type="button"
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted active:bg-brand-50"
+                    aria-label={`แก้ชื่อ ${p.label}`}
+                    onClick={() => {
+                      setEditId(p.id);
+                      setEditName(p.label);
+                    }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
                 <PinSecret role={role} id={p.id} revealable={p.revealable} />
                 <span>· {p.enabled ? "เปิดใช้" : "ปิดอยู่"}{p.env && " · ตั้งใน Vercel"}</span>
@@ -487,14 +524,6 @@ function SettingsTab() {
             ))}
           </div>
         )}
-      </section>
-
-      <section className="card flex flex-col gap-3">
-        <h3 className="font-bold">ตอนปลดล็อก</h3>
-        <label className="flex items-center gap-3">
-          <input type="checkbox" className="h-5 w-5 accent-orange-600" checked={data.askDeviceName} onChange={(e) => saveSettings({ askDeviceName: e.target.checked })} />
-          ให้ใส่ชื่อเล่นตอนปลดล็อก (บันทึกใน Log ว่าใครทำ)
-        </label>
       </section>
 
       <section className="card flex flex-col gap-3">

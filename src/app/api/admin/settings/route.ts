@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dailyPin } from "@/lib/pin";
-import { ENV_ID, newPin, publicPins, usableAdminPins, type PinEnv, type Role } from "@/lib/pins";
+import { ENV_ID, newPin, publicPins, renamePin, usableAdminPins, type PinEnv, type Role } from "@/lib/pins";
 import { HttpError, requireSession, route, writeLog } from "@/lib/session";
 import { getSettings, saveSettings, type Settings } from "@/lib/settings";
 import { bangkokDate } from "@/lib/time";
@@ -20,7 +20,6 @@ function publicView(s: Settings) {
     adminPins: publicPins("admin", s, env), // labels + on/off only — hashes never leave the server
     staffPins: publicPins("staff", s, env),
     staffPinDaily: s.staffPinDaily,
-    askDeviceName: s.askDeviceName,
     schedule: s.schedule,
     dailyPins: s.staffPinDaily ? { [today]: dailyPin(env.secret, today), [tomorrow]: dailyPin(env.secret, tomorrow) } : null,
   };
@@ -38,7 +37,8 @@ const isRole = (r: unknown): r is Role => r === "admin" || r === "staff";
  *   { addPin:    { role, pin, label } }      add a PIN
  *   { removePin: { role, id } }              delete a PIN (env PINs can't be deleted → 400)
  *   { togglePin: { role, id, enabled } }     switch a PIN on / off
- *   { staffPinDaily, askDeviceName, schedule }
+ *   { renamePin: { role, id, label } }       rename a PIN (incl. the Vercel env PINs)
+ *   { staffPinDaily, schedule }
  * Anyone logged in with a PIN that gets removed or switched off is logged out on their next request.
  * The last usable admin PIN can't be removed / switched off (the admin would be locked out).
  */
@@ -62,6 +62,17 @@ export const POST = route(async (req: Request) => {
     }
     next = { ...next, [listKey(role)]: [...next[listKey(role)], entry] };
     changed.push(`addPin:${role}:${entry.label}`);
+  }
+
+  if (b.renamePin) {
+    const { role, id, label } = b.renamePin;
+    if (!isRole(role)) throw new HttpError(400, "ประเภทรหัสไม่ถูกต้อง");
+    try {
+      next = { ...next, ...renamePin(role, String(id ?? ""), String(label ?? ""), next) };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+    changed.push(`renamePin:${role}:${String(label).trim().slice(0, 30)}`);
   }
 
   for (const op of ["removePin", "togglePin"] as const) {
@@ -89,10 +100,6 @@ export const POST = route(async (req: Request) => {
   if (typeof b.staffPinDaily === "boolean") {
     next.staffPinDaily = b.staffPinDaily;
     changed.push("staffPinDaily");
-  }
-  if (typeof b.askDeviceName === "boolean") {
-    next.askDeviceName = b.askDeviceName;
-    changed.push("askDeviceName");
   }
   if (b.schedule) {
     const sc = b.schedule;
