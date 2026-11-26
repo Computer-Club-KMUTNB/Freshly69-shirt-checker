@@ -185,6 +185,7 @@ export default function ScanScreen({ apiBase = "/api", test = false }: { apiBase
         <Scanner
           faculty={`คณะ ${short(faculty)}${test ? " (ทดสอบ)" : ""}`}
           busy={busy}
+          message={!result && !manual ? error : ""}
           paused={!!result || manual || busy}
           onDetect={onDetect}
           onManual={() => setManual(true)}

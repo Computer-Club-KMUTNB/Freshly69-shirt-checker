@@ -31,6 +31,8 @@ interface Props {
   faculty: string;
   /** A lookup is in flight → show a spinner over the video. */
   busy?: boolean;
+  /** A lookup error to show over the video (e.g. no internet) — otherwise it would be hidden behind the camera. */
+  message?: string;
 }
 
 // The KMUTNB card barcode is (probably) Code 128 holding the 13-digit id. We accept the other common
@@ -42,7 +44,7 @@ const FORMATS = ["code_128", "code_39", "code_93", "codabar", "itf", "ean_13"] a
  * tap-to-focus, type the id instead, close. Requires the same code twice in a row before
  * accepting it, to avoid misreads.
  */
-export default function Scanner({ onDetect, onManual, onClose, paused, faculty, busy = false }: Props) {
+export default function Scanner({ onDetect, onManual, onClose, paused, faculty, busy = false, message = "" }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<BarcodeDetector | null>(null);
@@ -57,7 +59,13 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
   const [error, setError] = useState("");
   const [focusDot, setFocusDot] = useState<{ x: number; y: number } | null>(null);
 
+  const cooldownRef = useRef<{ id: string; until: number }>({ id: "", until: 0 });
   pausedRef.current = paused;
+
+  // scanning resumes (result sheet closed) → the last card stays ignored for 3 more seconds
+  useEffect(() => {
+    if (!paused && cooldownRef.current.until === Infinity) cooldownRef.current.until = Date.now() + 3000;
+  }, [paused]);
 
   const track = () => streamRef.current?.getVideoTracks()[0];
 
@@ -147,10 +155,14 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
         for (const c of codes) {
           const id = normalizeStudentId(c.rawValue);
           if (!id) continue;
+          // the card that was just handled is often still in front of the camera when the result
+          // sheet closes → ignore that same id for a few seconds (another card scans immediately)
+          if (id === cooldownRef.current.id && Date.now() < cooldownRef.current.until) break;
           const last = lastRef.current;
           lastRef.current = last.code === id ? { code: id, n: last.n + 1 } : { code: id, n: 1 };
           if (lastRef.current.n >= 2) {
             lastRef.current = { code: "", n: 0 };
+            cooldownRef.current = { id, until: Infinity }; // set to "now + 3 s" when scanning resumes
             navigator.vibrate?.(80);
             onDetect(id);
           }
@@ -250,7 +262,7 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
             </span>
           </div>
         )}
-        {error && <p className="absolute inset-x-4 top-20 rounded-2xl bg-red-600/95 p-3 text-center text-sm">{error}</p>}
+        {(error || message) && <p className="absolute inset-x-4 top-20 rounded-2xl bg-red-600/95 p-3 text-center text-sm">{error || message}</p>}
       </div>
 
       {zoom != null && caps.zoom && caps.zoom.max > caps.zoom.min && (

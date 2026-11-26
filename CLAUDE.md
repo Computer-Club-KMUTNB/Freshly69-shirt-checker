@@ -37,7 +37,8 @@ on Vercel, Supabase Postgres. See README for setup.
   them (`/api/admin/pins/reveal`, logged as reveal_pin). Changing SESSION_SECRET makes old `enc` unreadable.
   (Older single-PIN settings are migrated automatically.) Two roles (admin / staff). Unlock once per day (cookie expires at Bangkok
   midnight). Admin can switch staff PIN to "changes daily" (derived from SESSION_SECRET).
-  5 wrong PINs per IP → 5 min lock.
+  Wrong-PIN lockout: 5 per phone (device id) or 30 per IP within 5 min → 5 min lock
+  (login_attempts.ip stores "ip#deviceId"; staff often share one venue IP).
 - No per-person accounts. Logs keep only: time, action, who (PIN name + role — no nickname field; admins name the PINs), faculty,
   student id, result. NO device id / IP / browser (owner: not needed). Pending-list views are not logged.
   login_attempts keeps IP for the 5-min lockout and is pruned after 1 day. The "devices" list page was removed (owner: not useful); the `devices` table is unused.
