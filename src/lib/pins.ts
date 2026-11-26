@@ -16,7 +16,11 @@ export interface PinEntry {
   enabled?: boolean; // undefined = on
 }
 
-/** The ADMIN_PIN / STAFF_PIN from Vercel env can't be deleted from Vercel by the app, only switched off. */
+/**
+ * The ADMIN_PIN / STAFF_PIN from Vercel env can't be deleted (owner's decision), only switched off.
+ * "removed" is a legacy value from when deleting was allowed — it is read as "off", so the PIN shows
+ * up in the list again (switched off) and can be switched back on.
+ */
 export type EnvPinState = "on" | "off" | "removed";
 
 export interface PinSettings {
@@ -47,7 +51,7 @@ export const ENV_ID = { admin: "env:admin", staff: "env:staff" } as const;
 export const ENV_LABEL = { admin: "รหัสตั้งต้น (ADMIN_PIN ใน Vercel)", staff: "รหัสตั้งต้น (STAFF_PIN ใน Vercel)" } as const;
 
 const on = (p: PinEntry) => p.enabled !== false;
-const envState = (s: PinSettings, role: Role): EnvPinState => s.envPins?.[role] ?? "on";
+const envState = (s: PinSettings, role: Role): "on" | "off" => (s.envPins?.[role] === "removed" ? "off" : s.envPins?.[role] ?? "on");
 const envValue = (env: PinEnv, role: Role) => (role === "admin" ? env.adminPin : env.staffPin);
 const envUsable = (s: PinSettings, env: PinEnv, role: Role) => {
   const v = envValue(env, role);
@@ -86,7 +90,7 @@ export function newPin(role: Role, pin: string, label: string, s: PinSettings, e
   if (list(s, role).length >= MAX_PINS_PER_ROLE) throw new Error(`เพิ่มได้สูงสุด ${MAX_PINS_PER_ROLE} รหัสต่อประเภท`);
   if ([...s.adminPins, ...s.staffPins].some((p) => verifyPin(pin, p.hash))) throw new Error("รหัสนี้มีอยู่แล้ว ใช้รหัสอื่น");
   for (const r of ["admin", "staff"] as const) {
-    if (envState(s, r) !== "removed" && envValue(env, r) === pin) throw new Error("รหัสนี้ซ้ำกับรหัสตั้งต้นใน Vercel ใช้รหัสอื่น");
+    if (envValue(env, r) === pin) throw new Error("รหัสนี้ซ้ำกับรหัสตั้งต้นใน Vercel ใช้รหัสอื่น");
   }
   if (constantTimeEqual(pin, dailyPin(env.secret, env.today))) throw new Error("รหัสนี้ตรงกับรหัสสตาฟรายวัน ใช้รหัสอื่น");
   return { id: randomUUID(), label: name, hash: hashPin(pin), enc: encryptPin(pin, env.secret), createdAt: new Date().toISOString(), enabled: true };
@@ -107,11 +111,11 @@ export interface PublicPin {
   revealable: boolean;
 }
 
-/** What the settings page shows. Never includes hashes. The env PIN appears first unless removed. */
+/** What the settings page shows. Never includes hashes. The env PIN (when set in Vercel) always appears first. */
 export function publicPins(role: Role, s: PinSettings, env: PinEnv): PublicPin[] {
   const out: PublicPin[] = [];
   const v = envValue(env, role);
-  if (v && isSixDigits(v) && envState(s, role) !== "removed") {
+  if (v && isSixDigits(v)) {
     out.push({ id: ENV_ID[role], label: ENV_LABEL[role], createdAt: null, enabled: envState(s, role) === "on", env: true, revealable: true });
   }
   for (const p of list(s, role)) out.push({ id: p.id, label: p.label, createdAt: p.createdAt, enabled: on(p), env: false, revealable: !!p.enc });
@@ -122,7 +126,7 @@ export function publicPins(role: Role, s: PinSettings, env: PinEnv): PublicPin[]
 export function revealPin(role: Role, id: string, s: PinSettings, env: PinEnv): string | null {
   if (id === ENV_ID[role]) {
     const v = envValue(env, role);
-    return v && isSixDigits(v) && envState(s, role) !== "removed" ? v : null;
+    return v && isSixDigits(v) ? v : null;
   }
   const p = list(s, role).find((x) => x.id === id);
   return p?.enc ? decryptPin(p.enc, env.secret) : null;

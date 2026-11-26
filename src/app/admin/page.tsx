@@ -344,7 +344,7 @@ function PinList({
         <span className="text-xs text-muted">เปิดใช้ {onCount} / {pins.length} รหัส</span>
       </div>
       {disabledNote && <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">{disabledNote}</p>}
-      <p className="text-xs text-muted">ปิดหรือลบรหัส → คนที่ใช้รหัสนั้นอยู่จะถูกออกจากระบบภายใน ~30 วินาที</p>
+      <p className="text-xs text-muted">ปิดหรือลบรหัส → คนที่ใช้รหัสนั้นอยู่จะถูกออกจากระบบภายใน ~30 วินาที · รหัสตั้งต้น (Vercel) ลบไม่ได้ ปิดได้อย่างเดียว</p>
 
       <div className="flex flex-col gap-2">
         {pins.length === 0 && <p className="rounded-xl bg-brand-50/50 px-3 py-2 text-sm text-muted">ยังไม่มีรหัส</p>}
@@ -358,19 +358,17 @@ function PinList({
               </div>
             </div>
             <Switch on={p.enabled} onChange={(v) => onSave({ togglePin: { role, id: p.id, enabled: v } })} />
-            <button
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-red-600 active:bg-red-50"
-              aria-label={`ลบรหัส ${p.label}`}
-              onClick={() =>
-                confirm(
-                  p.env
-                    ? `เอา "${p.label}" ออกจากรายการ? รหัสนี้จะใช้ไม่ได้อีก (ค่าใน Vercel ยังอยู่ แต่ระบบจะไม่รับ)`
-                    : `ลบรหัสของ "${p.label}"? คนที่ใช้รหัสนี้อยู่จะถูกออกจากระบบ`,
-                ) && onSave({ removePin: { role, id: p.id } })
-              }
-            >
-              <Trash2 size={17} />
-            </button>
+            {p.env ? (
+              <span className="h-9 w-9 shrink-0" aria-hidden /> /* env PINs can't be deleted, only switched off */
+            ) : (
+              <button
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-red-600 active:bg-red-50"
+                aria-label={`ลบรหัส ${p.label}`}
+                onClick={() => confirm(`ลบรหัสของ "${p.label}"? คนที่ใช้รหัสนี้อยู่จะถูกออกจากระบบ`) && onSave({ removePin: { role, id: p.id } })}
+              >
+                <Trash2 size={17} />
+              </button>
+            )}
           </div>
         ))}
       </div>

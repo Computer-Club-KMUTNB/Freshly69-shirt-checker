@@ -19,7 +19,7 @@ describe("matchPin (several PINs per role)", () => {
     expect(matchPin("555555", s, env)).toBeNull();
     expect(matchPin("12345", s, env)).toBeNull();
   });
-  it("Vercel env PINs work until switched off or removed", () => {
+  it("Vercel env PINs work until switched off (legacy 'removed' = off)", () => {
     expect(matchPin("999999", s, env)?.pinId).toBe(ENV_ID.admin);
     expect(matchPin("888888", s, env)?.pinId).toBe(ENV_ID.staff);
     expect(matchPin("999999", { ...s, envPins: { admin: "off" } }, env)).toBeNull();
@@ -79,7 +79,15 @@ describe("newPin / lists", () => {
     const pub = publicPins("admin", s, env);
     expect(pub[0]).toMatchObject({ id: ENV_ID.admin, env: true, enabled: true });
     expect(JSON.stringify(pub)).not.toContain(s.adminPins[0].hash);
-    expect(publicPins("admin", { ...s, envPins: { admin: "removed" } }, env)).toHaveLength(1);
+  });
+  it("env PIN can't be hidden: a legacy 'removed' one shows again, switched off", () => {
+    const pub = publicPins("admin", { ...s, envPins: { admin: "removed" } }, env);
+    expect(pub).toHaveLength(2);
+    expect(pub[0]).toMatchObject({ id: ENV_ID.admin, env: true, enabled: false });
+    expect(usableAdminPins({ ...s, envPins: { admin: "removed" } }, env)).toBe(1);
+  });
+  it("a switched-off env PIN still can't be reused as a new PIN", () => {
+    expect(() => newPin("staff", "999999", "x", { ...s, envPins: { admin: "off" } }, env)).toThrow("Vercel");
   });
 });
 
@@ -99,10 +107,10 @@ describe("reveal (admin 'show PIN' button)", () => {
     expect(revealPin("staff", "เก่า", s, env)).toBeNull();
     expect(publicPins("staff", s, env).find((x) => x.id === "เก่า")?.revealable).toBe(false);
   });
-  it("env PIN is revealed from the environment, unless removed", async () => {
+  it("env PIN is revealed from the environment (also when switched off)", async () => {
     const { revealPin } = await import("./pins");
     expect(revealPin("admin", ENV_ID.admin, settings(), env)).toBe("999999");
-    expect(revealPin("admin", ENV_ID.admin, settings({ envPins: { admin: "removed" } }), env)).toBeNull();
+    expect(revealPin("admin", ENV_ID.admin, settings({ envPins: { admin: "removed" } }), env)).toBe("999999");
     expect(revealPin("staff", ENV_ID.admin, settings(), env)).toBeNull();
   });
 });

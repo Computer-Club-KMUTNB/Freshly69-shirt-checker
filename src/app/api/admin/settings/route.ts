@@ -36,7 +36,7 @@ const isRole = (r: unknown): r is Role => r === "admin" || r === "staff";
 /**
  * POST any of:
  *   { addPin:    { role, pin, label } }      add a PIN
- *   { removePin: { role, id } }              delete a PIN (env PIN: hide + switch off)
+ *   { removePin: { role, id } }              delete a PIN (env PINs can't be deleted → 400)
  *   { togglePin: { role, id, enabled } }     switch a PIN on / off
  *   { staffPinDaily, askDeviceName, schedule }
  * Anyone logged in with a PIN that gets removed or switched off is logged out on their next request.
@@ -70,8 +70,9 @@ export const POST = route(async (req: Request) => {
     if (!isRole(role)) throw new HttpError(400, "ประเภทรหัสไม่ถูกต้อง");
     const enabled = op === "togglePin" ? !!b[op].enabled : false;
     if (id === ENV_ID[role]) {
-      next.envPins = { ...next.envPins, [role]: op === "removePin" ? "removed" : enabled ? "on" : "off" };
-      changed.push(`${op}:${role}:env${op === "togglePin" ? (enabled ? ":on" : ":off") : ""}`);
+      if (op === "removePin") throw new HttpError(400, "รหัสตั้งต้น (Vercel) ลบไม่ได้ — ปิดใช้งานได้อย่างเดียว");
+      next.envPins = { ...next.envPins, [role]: enabled ? "on" : "off" };
+      changed.push(`${op}:${role}:env${enabled ? ":on" : ":off"}`);
     } else {
       const list = next[listKey(role)];
       const found = list.find((p) => p.id === id);
