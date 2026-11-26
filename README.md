@@ -36,6 +36,10 @@ repo นี้เป็น **public** — ห้าม commit ไฟล์รา
 5. **Vercel** → Import repo นี้ → ใส่ env 5 ตัวเดียวกับข้อ 2 → Deploy
    ทุกครั้งที่ push เข้า `main` เว็บจะอัปเดตเอง
 
+## โหมดทดสอบ
+หน้า **/test** (แท็บ "ทดสอบ" ด้านล่าง) ใช้ตารางแยก `test_cases` / `test_distributions` — ไม่แตะข้อมูลจริง
+เปิดใช้ครั้งแรก: รัน [`supabase/test-mode.sql`](supabase/test-mode.sql) ใน Supabase SQL Editor · วิธีทดสอบดู docs/QA.md หมวด T
+
 ## คำสั่ง
 
 | คำสั่ง | ทำอะไร |

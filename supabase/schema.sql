@@ -149,3 +149,5 @@ $$;
 revoke all on function get_stats() from public, anon, authenticated;
 revoke all on function get_pending(text) from public, anon, authenticated;
 revoke all on people from anon, authenticated;
+
+-- Test mode tables live in supabase/test-mode.sql (run that file too).

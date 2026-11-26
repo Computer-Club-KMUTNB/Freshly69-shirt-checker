@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { BarChart3, LogOut, ScanLine, Shirt, ShieldCheck } from "lucide-react";
+import { BarChart3, FlaskConical, LogOut, ScanLine, Shirt, ShieldCheck, Users } from "lucide-react";
 import { api } from "@/lib/client";
 
 export interface SessionInfo {
@@ -43,8 +43,9 @@ export default function Shell({ children, adminOnly = false }: { children: React
       api<{ session: SessionInfo | null }>("/api/auth/me")
         .then(({ session }) => {
           if (!session) {
+            const hadSession = !!cachedSession();
             sessionStorage.removeItem(KEY);
-            router.replace("/");
+            router.replace(hadSession ? "/?out=pin" : "/");
           } else {
             sessionStorage.setItem(KEY, JSON.stringify(session));
             setS(session);
@@ -59,9 +60,12 @@ export default function Shell({ children, adminOnly = false }: { children: React
     // The login cookie is shared by every tab of this browser: unlocking as staff in another tab
     // replaces an admin login. Re-check whenever this tab comes back into view.
     const onVisible = () => document.visibilityState === "visible" && check();
+    // a PIN removed / switched off by the admin logs its users out within ~30 s even if they are idle
+    const timer = setInterval(() => document.visibilityState === "visible" && check(), 30_000);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("f69:recheck-session", check);
     return () => {
+      clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("f69:recheck-session", check);
     };
@@ -78,7 +82,14 @@ export default function Shell({ children, adminOnly = false }: { children: React
   const tabs = [
     { href: "/scan", label: "สแกน", Icon: ScanLine },
     { href: "/overview", label: "ภาพรวม", Icon: BarChart3 },
-    ...(s?.role === "admin" ? [{ href: "/admin", label: "แอดมิน", Icon: ShieldCheck }] : []),
+    // everyone: รายชื่อ (ยังไม่รับ · แจกล่าสุด · ปัญหา) · admin only: test mode + admin tools
+    ...(s ? [{ href: "/roster", label: "รายชื่อ", Icon: Users }] : []),
+    ...(s?.role === "admin"
+      ? [
+          { href: "/test", label: "ทดสอบ", Icon: FlaskConical },
+          { href: "/admin", label: "แอดมิน", Icon: ShieldCheck },
+        ]
+      : []),
   ];
 
   return (

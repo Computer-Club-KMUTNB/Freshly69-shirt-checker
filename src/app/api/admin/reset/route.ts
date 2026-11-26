@@ -6,7 +6,7 @@ import { RESET_WORD } from "@/lib/constants";
 
 /**
  * ADMIN: "เริ่มใหม่" — wipe everything collected while testing so the real event starts clean.
- * Deletes: distributions (all handouts), logs, devices, login_attempts.
+ * Deletes: distributions (all handouts), logs, login_attempts.
  * Keeps:   students (the imported list) and settings (PINs, schedule).
  * Body must be { confirm: "เริ่มใหม่" } so it can't be triggered by accident.
  */
@@ -24,7 +24,6 @@ export const POST = route(async (req: Request) => {
   // distributions first (it references students), then the audit tables
   await wipe("distributions", "id", "gte", 0);
   await wipe("logs", "id", "gte", 0);
-  await wipe("devices", "device_id", "neq", "");
   await wipe("login_attempts", "id", "gte", 0);
 
   // first line of the new log: who reset and how much was removed

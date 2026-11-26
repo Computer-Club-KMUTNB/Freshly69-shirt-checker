@@ -51,7 +51,10 @@ export async function api<T = unknown>(url: string, init?: { method?: string; bo
   }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && typeof window !== "undefined" && window.location.pathname !== "/") {
-    window.location.href = "/";
+    try {
+      sessionStorage.removeItem("f69_session_cache");
+    } catch {}
+    window.location.href = "/?out=pin";
   }
   // 403 = this browser's login changed role (e.g. staff unlocked in another tab) → let Shell re-check.
   if (res.status === 403 && typeof window !== "undefined") window.dispatchEvent(new Event("f69:recheck-session"));

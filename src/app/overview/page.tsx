@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Clock, RefreshCw, ScanLine } from "lucide-react";
+import { AlertTriangle, Check, Clock, Copy, Download, FileText, RefreshCw, ScanLine } from "lucide-react";
+import BottomSheet from "@/components/BottomSheet";
 import Shell from "@/components/Shell";
 import { FACULTY_KEYS, ISSUE_LABEL, SIZES } from "@/lib/constants";
-import { summarize, type RawStats, type Tally } from "@/lib/stats";
+import { summarize, summaryCsv, summaryText, type RawStats, type Tally } from "@/lib/stats";
 import { useCached } from "@/lib/useCached";
 
 export default function OverviewPage() {
@@ -78,6 +79,7 @@ function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) 
 function Overview() {
   const { data: raw, error, loading, reload } = useCached<RawStats>("/api/stats", { persist: true, refreshMs: 30_000 });
   const [faculty, setFaculty] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
 
   if (!raw) {
     return (
@@ -108,6 +110,11 @@ function Overview() {
           </button>
         ))}
       </div>
+
+      <button onClick={() => setShowSummary(true)} className="btn btn-soft w-full">
+        <FileText size={18} /> สรุปผล (คัดลอก / ดาวน์โหลด)
+      </button>
+      {showSummary && <SummarySheet raw={raw} onClose={() => setShowSummary(false)} />}
 
       <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-brand-500 to-brand-600 p-5 text-white shadow-[0_20px_40px_-20px_rgb(234_88_12/0.8)]">
         <div className="pointer-events-none absolute -right-8 -top-12 h-40 w-40 rounded-full bg-white/10" />
@@ -228,5 +235,54 @@ function Overview() {
         {error && <span className="text-red-600"> · {error}</span>}
       </button>
     </div>
+  );
+}
+
+/** "สรุปผล": the whole event in one text (to paste in a chat group) + a CSV per faculty × size. Counts only. */
+function SummarySheet({ raw, onClose }: { raw: RawStats; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const now = new Date();
+  const when = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" }).format(now);
+  const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(now);
+  const text = summaryText(raw, FACULTY_KEYS, SIZES, when, todayKey);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // old browsers: select the text so the user can copy by hand
+      const el = document.getElementById("summary-text");
+      if (el) window.getSelection()?.selectAllChildren(el);
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  function download() {
+    const blob = new Blob([summaryCsv(raw, FACULTY_KEYS, SIZES)], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `freshly69-summary-${todayKey}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <h3 className="text-lg font-bold">สรุปผลการแจกเสื้อ</h3>
+      <pre id="summary-text" className="max-h-[50dvh] overflow-auto whitespace-pre-wrap rounded-2xl border border-line bg-white p-4 font-sans text-sm leading-relaxed">
+        {text}
+      </pre>
+      <div className="grid grid-cols-2 gap-3">
+        <button className="btn btn-primary py-3.5" onClick={copy}>
+          {copied ? <Check size={18} /> : <Copy size={18} />} {copied ? "คัดลอกแล้ว" : "คัดลอกข้อความ"}
+        </button>
+        <button className="btn btn-ghost py-3.5" onClick={download}>
+          <Download size={18} /> ดาวน์โหลด CSV
+        </button>
+      </div>
+      <p className="text-center text-xs text-muted">มีแค่ตัวเลข ไม่มีชื่อหรือเบอร์ ส่งในกลุ่มได้</p>
+    </BottomSheet>
   );
 }

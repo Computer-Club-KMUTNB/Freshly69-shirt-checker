@@ -32,6 +32,7 @@ export const ACTION_LABEL: Record<string, string> = {
   void: "ยกเลิก/แก้ไข",
   view_pending: "เปิดรายชื่อยังไม่รับ",
   settings: "แก้การตั้งค่า",
+  reveal_pin: "ดูรหัส",
   reset: "เริ่มใหม่ (ล้างข้อมูลทดสอบ)",
 };
 

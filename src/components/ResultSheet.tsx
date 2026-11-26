@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { AlertTriangle, ArrowRight, Ban, Check, CheckCircle2, Loader2, MapPin, Pencil, SearchX, UserX, Users } from "lucide-react";
+import BottomSheet from "@/components/BottomSheet";
 import { api, ApiError } from "@/lib/client";
 import type { ActiveDistribution, Candidate, LookupResult } from "@/lib/rules";
 import { fmtDateTime } from "@/lib/time";
 
 interface Props {
+  /** "/api" (real) or "/api/test" (test mode). */
+  apiBase?: string;
   lookup: LookupResult;
   faculty: string;
   /** Re-run the lookup for this id (after "แก้ไข" or a conflict). */
@@ -56,7 +59,7 @@ function Person({ c, studentId, size }: { c: Candidate; studentId: string; size?
 }
 
 /** Bottom sheet shown after a scan/search: the status popup + confirm / edit / done buttons. */
-export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Props) {
+export default function ResultSheet({ apiBase = "/api", lookup, faculty, onRelookup, onDone }: Props) {
   const [rowId, setRowId] = useState<number | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,7 +74,7 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
     setBusy(true);
     setError("");
     try {
-      const res = await api<{ distribution: ActiveDistribution }>("/api/distribute", {
+      const res = await api<{ distribution: ActiveDistribution }>(`${apiBase}/distribute`, {
         body: { studentId: r.studentId, faculty, rowId, size },
       });
       navigator.vibrate?.([60, 40, 60]);
@@ -89,7 +92,7 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
     setBusy(true);
     setError("");
     try {
-      await api("/api/distribute/void", { body: { distributionId: done.id, reason: "กดแก้ไขหลังยืนยัน" } });
+      await api(`${apiBase}/distribute/void`, { body: { distributionId: done.id, reason: "กดแก้ไขหลังยืนยัน" } });
       onRelookup(r.studentId);
     } catch (e) {
       setError((e as Error).message);
@@ -102,7 +105,7 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
   if (done) {
     const c = cands.find((x) => x.rowId === rowId) ?? latest;
     return (
-      <Sheet>
+      <Sheet onClose={busy ? undefined : onDone}>
         <div className="flex flex-col items-center py-2 text-center">
           <span className="animate-pop grid h-16 w-16 place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
             <Check size={36} strokeWidth={3} />
@@ -156,7 +159,7 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
           <Status tone="red" icon={<Ban size={18} />} title="รับเสื้อไปแล้ว">
             ข้อมูลดังกล่าวมีสถานะการรับเสื้อเป็นเสร็จสิ้นไปแล้ว หากเกิดข้อผิดพลาดโปรดติดต่อสตาฟ
             <div className="mt-2 rounded-xl bg-white/70 px-3 py-2 text-xs text-red-800">
-              รับเมื่อ {fmtDateTime(r.distribution.created_at)} · ไซส์ {r.distribution.size} · โต๊ะ {r.distribution.faculty}
+              รับเมื่อ {fmtDateTime(r.distribution.created_at)} · ไซส์ {r.distribution.size} · แจกที่คณะ {r.distribution.faculty}
               {r.distribution.device_name ? ` · โดย ${r.distribution.device_name}` : ""}
             </div>
           </Status>
@@ -168,7 +171,7 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
       body = (
         <>
           <Status tone="orange" icon={<MapPin size={18} />} title={`ให้ไปรับที่แถวคณะ ${r.correctFaculty}`}>
-            น้องอยู่คณะ <b>{r.correctFaculty}</b> แต่โต๊ะนี้แจกคณะ <b>{r.selectedFaculty}</b> — ยังแจกไม่ได้
+            น้องอยู่คณะ <b>{r.correctFaculty}</b> แต่ตอนนี้กำลังแจกคณะ <b>{r.selectedFaculty}</b> — ยังแจกไม่ได้
           </Status>
           {cands.length > 1 && (
             <Status tone="amber" icon={<AlertTriangle size={18} />} title="น้องกรอกฟอร์มมากกว่า 1 ครั้ง">
@@ -255,10 +258,10 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
   const showConfirm = ["ok", "dup_same", "dup_size", "dup_person"].includes(r.result);
 
   return (
-    <Sheet>
-      <div className="flex items-center justify-between text-sm">
+    <Sheet onClose={busy ? undefined : onDone}>
+      <div className="flex items-center justify-between pr-11 text-sm">
         <span className="font-semibold text-muted">ผลการตรวจ</span>
-        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">โต๊ะ {faculty}</span>
+        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">คณะ {faculty}</span>
       </div>
       {body}
       {error && <Status tone="red" icon={<AlertTriangle size={18} />} title={error} />}
@@ -276,13 +279,11 @@ export default function ResultSheet({ lookup, faculty, onRelookup, onDone }: Pro
   );
 }
 
-function Sheet({ children }: { children: React.ReactNode }) {
+function Sheet({ children, onClose }: { children: React.ReactNode; onClose?: () => void }) {
+  // swipe down = same as ยกเลิก / เสร็จสิ้น; a stray tap on the backdrop must not close it
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/50 backdrop-blur-[2px]">
-      <div className="animate-sheet mx-auto flex max-h-[92dvh] w-full max-w-2xl flex-col gap-3.5 overflow-y-auto rounded-t-[1.75rem] bg-[#fffaf6] p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-ink">
-        <div className="mx-auto -mt-1 h-1.5 w-10 shrink-0 rounded-full bg-line" />
-        {children}
-      </div>
-    </div>
+    <BottomSheet onClose={onClose} backdropClose={false}>
+      {children}
+    </BottomSheet>
   );
 }

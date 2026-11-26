@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
-import { dailyPin, hashPin, isSixDigits } from "@/lib/pin";
+import { dailyPin } from "@/lib/pin";
+import { ENV_ID, newPin, publicPins, usableAdminPins, type PinEnv, type Role } from "@/lib/pins";
 import { HttpError, requireSession, route, writeLog } from "@/lib/session";
 import { getSettings, saveSettings, type Settings } from "@/lib/settings";
 import { bangkokDate } from "@/lib/time";
 
+const pinEnv = (): PinEnv => ({
+  adminPin: process.env.ADMIN_PIN,
+  staffPin: process.env.STAFF_PIN,
+  secret: process.env.SESSION_SECRET!,
+  today: bangkokDate(),
+});
+
 function publicView(s: Settings) {
-  const today = bangkokDate();
+  const env = pinEnv();
+  const today = env.today;
   const tomorrow = bangkokDate(new Date(Date.now() + 86_400_000));
   return {
+    adminPins: publicPins("admin", s, env), // labels + on/off only — hashes never leave the server
+    staffPins: publicPins("staff", s, env),
     staffPinDaily: s.staffPinDaily,
     askDeviceName: s.askDeviceName,
     schedule: s.schedule,
-    adminPinSet: !!s.adminPinHash,
-    staffPinSet: !!s.staffPinHash,
-    dailyPins: s.staffPinDaily
-      ? { [today]: dailyPin(process.env.SESSION_SECRET!, today), [tomorrow]: dailyPin(process.env.SESSION_SECRET!, tomorrow) }
-      : null,
+    dailyPins: s.staffPinDaily ? { [today]: dailyPin(env.secret, today), [tomorrow]: dailyPin(env.secret, tomorrow) } : null,
   };
 }
 
@@ -24,32 +31,66 @@ export const GET = route(async () => {
   return NextResponse.json(publicView(await getSettings(true)));
 });
 
-/** POST any of { adminPin, staffPin, staffPinDaily, askDeviceName, schedule } */
+const isRole = (r: unknown): r is Role => r === "admin" || r === "staff";
+
+/**
+ * POST any of:
+ *   { addPin:    { role, pin, label } }      add a PIN
+ *   { removePin: { role, id } }              delete a PIN (env PIN: hide + switch off)
+ *   { togglePin: { role, id, enabled } }     switch a PIN on / off
+ *   { staffPinDaily, askDeviceName, schedule }
+ * Anyone logged in with a PIN that gets removed or switched off is logged out on their next request.
+ * The last usable admin PIN can't be removed / switched off (the admin would be locked out).
+ */
 export const POST = route(async (req: Request) => {
   const s = await requireSession("admin");
   const b = await req.json().catch(() => ({}));
-  const patch: Partial<Settings> = {};
+  const cur = await getSettings(true);
+  const env = pinEnv();
+  let next: Settings = { ...cur, envPins: { ...cur.envPins } };
   const changed: string[] = [];
+  const listKey = (role: Role): "adminPins" | "staffPins" => (role === "admin" ? "adminPins" : "staffPins");
 
-  if (b.adminPin != null) {
-    if (!isSixDigits(String(b.adminPin))) throw new HttpError(400, "รหัสแอดมินต้องเป็นตัวเลข 6 หลัก");
-    patch.adminPinHash = hashPin(String(b.adminPin));
-    changed.push("adminPin");
+  if (b.addPin) {
+    const { role, pin, label } = b.addPin;
+    if (!isRole(role)) throw new HttpError(400, "ประเภทรหัสไม่ถูกต้อง");
+    let entry;
+    try {
+      entry = newPin(role, String(pin ?? ""), String(label ?? ""), next, env);
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+    next = { ...next, [listKey(role)]: [...next[listKey(role)], entry] };
+    changed.push(`addPin:${role}:${entry.label}`);
   }
-  if (b.staffPin != null) {
-    if (!isSixDigits(String(b.staffPin))) throw new HttpError(400, "รหัสสตาฟต้องเป็นตัวเลข 6 หลัก");
-    patch.staffPinHash = hashPin(String(b.staffPin));
-    changed.push("staffPin");
+
+  for (const op of ["removePin", "togglePin"] as const) {
+    if (!b[op]) continue;
+    const { role, id } = b[op];
+    if (!isRole(role)) throw new HttpError(400, "ประเภทรหัสไม่ถูกต้อง");
+    const enabled = op === "togglePin" ? !!b[op].enabled : false;
+    if (id === ENV_ID[role]) {
+      next.envPins = { ...next.envPins, [role]: op === "removePin" ? "removed" : enabled ? "on" : "off" };
+      changed.push(`${op}:${role}:env${op === "togglePin" ? (enabled ? ":on" : ":off") : ""}`);
+    } else {
+      const list = next[listKey(role)];
+      const found = list.find((p) => p.id === id);
+      if (!found) throw new HttpError(404, "ไม่พบรหัสนี้");
+      const updated = op === "removePin" ? list.filter((p) => p.id !== id) : list.map((p) => (p.id === id ? { ...p, enabled } : p));
+      next = { ...next, [listKey(role)]: updated };
+      changed.push(`${op}:${role}:${found.label}${op === "togglePin" ? (enabled ? ":on" : ":off") : ""}`);
+    }
+    if (role === "admin" && usableAdminPins(next, env) === 0) {
+      throw new HttpError(400, "ต้องเหลือรหัสแอดมินที่เปิดใช้อย่างน้อย 1 รหัส — เพิ่ม/เปิดรหัสอื่นก่อน");
+    }
   }
-  if (b.adminPin != null && b.staffPin != null && String(b.adminPin) === String(b.staffPin)) {
-    throw new HttpError(400, "รหัสแอดมินกับสตาฟต้องไม่ซ้ำกัน");
-  }
+
   if (typeof b.staffPinDaily === "boolean") {
-    patch.staffPinDaily = b.staffPinDaily;
+    next.staffPinDaily = b.staffPinDaily;
     changed.push("staffPinDaily");
   }
   if (typeof b.askDeviceName === "boolean") {
-    patch.askDeviceName = b.askDeviceName;
+    next.askDeviceName = b.askDeviceName;
     changed.push("askDeviceName");
   }
   if (b.schedule) {
@@ -57,11 +98,11 @@ export const POST = route(async (req: Request) => {
     const days = Array.isArray(sc.days) ? sc.days.filter((d: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) : [];
     const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
     if (!hhmm.test(sc.start) || !hhmm.test(sc.end) || sc.start >= sc.end) throw new HttpError(400, "เวลาเปิด/ปิดไม่ถูกต้อง");
-    patch.schedule = { enabled: !!sc.enabled, days, start: sc.start, end: sc.end };
+    next.schedule = { enabled: !!sc.enabled, days, start: sc.start, end: sc.end };
     changed.push("schedule");
   }
 
-  const next = await saveSettings(patch);
-  await writeLog(s, "settings", { detail: { changed } }); // never log the PINs themselves
-  return NextResponse.json(publicView(next));
+  const saved = await saveSettings(next);
+  await writeLog(s, "settings", { detail: { changed } }); // labels only, never the PINs
+  return NextResponse.json(publicView(saved));
 });

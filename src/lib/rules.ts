@@ -80,13 +80,15 @@ export function evaluate(
   rows: StudentRow[],
   active: ActiveDistribution | null,
   selectedFaculty: string,
+  /** Test mode decides "is year 1" per test case instead of by the id prefix. */
+  opts: { isFreshman?: (studentId: string) => boolean } = {},
 ): LookupResult {
   const studentId = normalizeStudentId(rawId);
   if (!studentId) return { result: "invalid", studentId: rawId };
   const mine = rows.filter((r) => r.student_id === studentId);
   if (mine.length === 0) return { result: "not_found", studentId };
   const candidates = toCandidates(mine);
-  if (!isFreshman(studentId)) return { result: "not_freshman", studentId, candidates };
+  if (!(opts.isFreshman ?? isFreshman)(studentId)) return { result: "not_freshman", studentId, candidates };
   if (active) return { result: "received", studentId, distribution: active, candidates };
   const faculty = correctFaculty(mine);
   if (faculty !== selectedFaculty) {

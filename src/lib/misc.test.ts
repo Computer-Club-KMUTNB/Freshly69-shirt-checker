@@ -52,3 +52,32 @@ describe("stats summarize", () => {
       expect.arrayContaining([{ gender: "F", size: "M", n: 2 }, { gender: "M", size: "L", n: 5 }]),
     ));
 });
+
+describe("summary (สรุปผล)", () => {
+  const raw: RawStats = {
+    rows: [
+      { faculty: "วทอ", gender: "M", size: "L", received: true, n: 3 },
+      { faculty: "วทอ", gender: "F", size: "M", received: false, n: 2 },
+      { faculty: "ครุ", gender: "M", size: "L", received: false, n: 5 },
+    ],
+    given_by_size: [],
+    hourly: [{ hour: "2026-12-02 16", n: 3 }],
+    pending_scans: 1,
+    issues: [{ issue_type: "dup_same", n: 2, resolved: 1 }],
+  };
+  it("text has totals, today, per faculty and duplicates", async () => {
+    const { summaryText } = await import("./stats");
+    const t = summaryText(raw, ["วทอ", "ครุ"], ["M", "L"], "02/12 18:00", "2026-12-02");
+    expect(t).toContain("ทั้งหมด 10 คน · แจกแล้ว 3 (30%) · ยังไม่รับ 7");
+    expect(t).toContain("แจกวันนี้ 3 ตัว");
+    expect(t).toContain("- วทอ: 3/5 (60%) · เหลือ 2");
+    expect(t).toContain("รหัสซ้ำ: แก้แล้ว 1/2");
+  });
+  it("csv has a row per faculty×size and a total", async () => {
+    const { summaryCsv } = await import("./stats");
+    const lines = summaryCsv(raw, ["วทอ", "ครุ"], ["M", "L"]).replace("﻿", "").split("\r\n");
+    expect(lines).toContain("วทอ,L,3,3,0");
+    expect(lines).toContain("ครุ,L,5,0,5");
+    expect(lines[lines.length - 1]).toBe("รวม,,10,3,7");
+  });
+});

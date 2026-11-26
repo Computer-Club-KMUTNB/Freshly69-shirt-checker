@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession, route } from "@/lib/session";
 
-/** ADMIN: the problem list (duplicate ids). "แก้แล้ว" = has an active distribution. */
+/** STAFF + ADMIN: the problem list (duplicate ids). "แก้แล้ว" = has an active distribution. */
 export const GET = route(async () => {
-  await requireSession("admin");
+  await requireSession("staff"); // staff + admin (รายชื่อ page)
   const { data: rows, error } = await db()
     .from("students")
     .select("id, student_id, title, full_name, form_faculty, id_faculty, size, phone, submitted_at, issue_type")

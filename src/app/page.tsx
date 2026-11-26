@@ -22,6 +22,9 @@ export default function UnlockPage() {
   const [shake, setShake] = useState(false);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("out") === "pin") {
+      setError("ออกจากระบบแล้ว — รหัสที่ใช้อยู่ถูกปิด/ลบ หรือหมดอายุ กรุณาปลดล็อกใหม่");
+    }
     setName(store("f69_device_name", ""));
     api<Me>("/api/auth/me")
       .then((m) => {
@@ -36,7 +39,7 @@ export default function UnlockPage() {
 
   async function unlock(code: string) {
     if (me?.askDeviceName && !name.trim()) {
-      setError("ใส่ชื่อเล่น / ชื่อโต๊ะก่อน");
+      setError("ใส่ชื่อเล่นก่อน");
       return;
     }
     setBusy(true);
@@ -79,8 +82,8 @@ export default function UnlockPage() {
 
       {me?.askDeviceName && (
         <label className="mt-7 flex flex-col gap-1.5">
-          <span className="text-sm font-semibold">ชื่อเล่น / ชื่อโต๊ะ</span>
-          <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="เช่น บอส โต๊ะ 2" />
+          <span className="text-sm font-semibold">ชื่อเล่น</span>
+          <input className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="เช่น บอส" />
         </label>
       )}
 

@@ -1,26 +1,26 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/lib/db";
-import { constantTimeEqual, dailyPin, isSixDigits, verifyPin } from "@/lib/pin";
-import { COOKIE, HttpError, clientInfo, route, signSession, writeLog, type Role } from "@/lib/session";
+import { matchPin } from "@/lib/pins";
+import { COOKIE, HttpError, clientInfo, route, signSession } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { bangkokDate, isOpen, nextBangkokMidnight } from "@/lib/time";
 
 const MAX_FAILS = 5;
 const LOCK_MINUTES = 5;
 
-function matchesEnvPin(pin: string, envPin: string | undefined) {
-  return !!envPin && isSixDigits(envPin) && constantTimeEqual(pin, envPin);
-}
-
-/** POST { pin, deviceId, deviceName? } → sets a session cookie valid until midnight (Bangkok). */
+/**
+ * POST { pin, deviceId, deviceName? } → sets a session cookie valid until midnight (Bangkok).
+ * Any of the admin / staff PINs in Settings works; the PIN's label (e.g. "ทีม A") is shown in the
+ * header and written to every log line, so the admin can see who did what.
+ */
 export const POST = route(async (req: Request) => {
   const body = await req.json().catch(() => ({}));
   const pin = String(body.pin ?? "");
   const deviceId = String(body.deviceId ?? "").slice(0, 64);
-  const deviceName = body.deviceName ? String(body.deviceName).trim().slice(0, 40) : null;
+  const nickname = body.deviceName ? String(body.deviceName).trim().slice(0, 40) : null;
   if (!deviceId) throw new HttpError(400, "ไม่มีรหัสเครื่อง");
 
-  const { ip, userAgent } = await clientInfo();
+  const { ip } = await clientInfo();
   const since = new Date(Date.now() - LOCK_MINUTES * 60_000).toISOString();
   // rate-limit check and settings in parallel (one round trip instead of two)
   const [{ count }, settings] = await Promise.all([
@@ -31,42 +31,30 @@ export const POST = route(async (req: Request) => {
     throw new HttpError(429, `ใส่รหัสผิดเกิน ${MAX_FAILS} ครั้ง รอ ${LOCK_MINUTES} นาทีแล้วลองใหม่`);
   }
 
-  let role: Role | null = null;
-  if (isSixDigits(pin)) {
-    const adminOk = settings.adminPinHash
-      ? verifyPin(pin, settings.adminPinHash)
-      : matchesEnvPin(pin, process.env.ADMIN_PIN);
-    if (adminOk) role = "admin";
-    else {
-      const staffOk = settings.staffPinDaily
-        ? constantTimeEqual(pin, dailyPin(process.env.SESSION_SECRET!, bangkokDate()))
-        : settings.staffPinHash
-          ? verifyPin(pin, settings.staffPinHash)
-          : matchesEnvPin(pin, process.env.STAFF_PIN);
-      if (staffOk) role = "staff";
-    }
-  }
+  const match = matchPin(pin, settings, {
+    adminPin: process.env.ADMIN_PIN,
+    staffPin: process.env.STAFF_PIN,
+    secret: process.env.SESSION_SECRET!,
+    today: bangkokDate(),
+  });
 
   after(async () => {
-    await db().from("login_attempts").insert({ ip, ok: !!role });
+    await db().from("login_attempts").insert({ ip, ok: !!match });
+    // IPs are kept only for the 5-minute lockout → drop anything older than a day
+    await db().from("login_attempts").delete().lt("at", new Date(Date.now() - 86_400_000).toISOString());
   });
-  if (!role) {
-    await writeLog({ deviceId, deviceName }, "unlock_fail");
+  if (!match) {
     throw new HttpError(401, "รหัสไม่ถูกต้อง");
   }
+  const { role, label, pinId } = match;
   if (role === "staff" && !isOpen(settings.schedule)) {
     throw new HttpError(403, "ระบบปิดอยู่ (นอกวัน/เวลาแจกเสื้อ)");
   }
-  if (settings.askDeviceName && !deviceName) throw new HttpError(400, "กรุณาใส่ชื่อเล่น/ชื่อโต๊ะ");
+  if (settings.askDeviceName && !nickname) throw new HttpError(400, "กรุณาใส่ชื่อเล่น");
 
-  const session = { role, deviceId, deviceName };
-  after(async () => {
-    await db().from("devices").upsert(
-      { device_id: deviceId, name: deviceName, role, user_agent: userAgent, ip, last_seen: new Date().toISOString() },
-      { onConflict: "device_id" },
-    );
-  });
-  await writeLog(session, "unlock");
+  // "ชื่อเล่น (ชื่อรหัส)" — either part may be missing
+  const deviceName = nickname && label ? `${nickname} (${label})` : (nickname ?? label);
+  const session = { role, deviceId, deviceName, pinId };
 
   const exp = nextBangkokMidnight();
   const res = NextResponse.json({ role, deviceName });

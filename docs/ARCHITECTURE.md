@@ -14,6 +14,7 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 | `src/lib/stats.ts` | Pure aggregation for the overview page. |
 | `src/lib/session.ts` | JWT cookie, `requireSession(role)`, opening-hours check, `writeLog()`, `route()` error wrapper. |
 | `src/lib/pin.ts` | scrypt PIN hashing, daily PIN derivation. |
+| `src/lib/pins.ts` | Several PINs per role: `matchPin()` (unlock), `newPin()` (add, rejects duplicates), never returns hashes. |
 | `src/lib/settings.ts` | Settings row (`settings.key='app'`) with defaults. |
 | `src/lib/lookup.ts` | Loads rows + active distribution for one id, then `evaluate()`. |
 | `src/lib/client.ts` | Browser helpers: `api()` fetch wrapper, device id, localStorage. |
@@ -32,17 +33,30 @@ phone (browser) ──HTTPS──> Vercel: Next.js pages + API routes ──serv
 | `POST /api/lookup` | staff | `{studentId, faculty, source}` → `LookupResult`; logs scan/search |
 | `POST /api/distribute` | staff | `{studentId, faculty, rowId?, size?}` → re-validates, inserts |
 | `POST /api/distribute/void` | staff | `{distributionId}` → sets `voided_at` (แก้ไข) |
-| `GET /api/stats` | staff | counts only |
-| `GET /api/admin/pending?faculty=` | admin | names + phones (view is logged) |
-| `GET /api/admin/issues` · `recent` · `logs` · `devices` | admin | |
+| `GET /api/stats` | staff | counts only (overview + สรุปผล text/CSV built client-side in `stats.ts`) |
+| `GET /api/roster/pending?faculty=` | staff | not-received list with names + phones ("รายชื่อ" page) |
+| `GET /api/roster/recent?faculty=` | staff | latest 100 handouts |
+| `GET /api/roster/issues` | staff | duplicate-id problem list |
+| `GET /api/admin/logs` | admin | handout log (scan/search, confirm, void) |
 | `GET/POST /api/admin/settings` | admin | PINs are stored hashed; never logged |
 | `POST /api/admin/reset` | admin | `{confirm:"เริ่มใหม่"}` → deletes distributions, logs, devices, login_attempts (keeps students + settings); logs a `reset` line |
+
+## Test mode (/test)
+- Tables `test_cases` + `test_distributions` (supabase/test-mode.sql). APIs `/api/test/*` mirror the real ones
+  but only touch those tables, write no logs, and require an admin PIN (the "ทดสอบ" tab is hidden for staff).
+- A test case = one student id (e.g. a staff member's own year-3 card) + name, faculty, size, **year**
+  (only year 1 may receive — overrides the 69-prefix rule) and **problem** (none / dup_same / dup_size /
+  dup_person / received). `caseToRows()` turns it into the same rows the real rules use, so popups match.
+- `ScanScreen` / `ResultSheet` take `apiBase` ("/api" or "/api/test"); the /test page reuses them.
 
 ## Data model
 - `students` — one row per form response (duplicates allowed). `issue_type` none/dup_same/dup_size/dup_person.
 - `distributions` — one row per handout; undo = `voided_at`. Partial unique index → max one active per student
   (two phones confirming at once: second gets 409 "เพิ่งถูกยืนยันจากอีกเครื่อง").
-- `logs` — append-only audit. `devices` — last seen info per device id. `login_attempts` — rate limit.
+- `logs` — append-only audit: time, action, who (PIN label / nickname + role), faculty, student id, detail.
+  Columns device_id / ip / user_agent still exist but are no longer written (cleared on 2026-11-26).
+  Log tab: date-time range + action + student id filters; `src/lib/logtext.ts` turns detail into Thai. `login_attempts` — rate limit.
+  `devices` — no longer written (device list page removed).
 - `people` view — one row per student id (latest response, inferred faculty) used for counts.
 
 ## Performance notes

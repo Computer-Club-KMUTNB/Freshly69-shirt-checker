@@ -27,7 +27,7 @@ interface Props {
   onManual: () => void;
   onClose: () => void;
   paused: boolean;
-  /** Faculty desk shown in the top bar. */
+  /** Badge text in the top bar, e.g. "คณะ วิศวะ". */
   faculty: string;
   /** A lookup is in flight → show a spinner over the video. */
   busy?: boolean;
@@ -221,7 +221,7 @@ export default function Scanner({ onDetect, onManual, onClose, paused, faculty, 
 
         {/* top bar */}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 pt-[calc(env(safe-area-inset-top)+1rem)]">
-          <span className="rounded-full bg-brand-500 px-3 py-1 text-sm font-bold shadow-lg">โต๊ะ {faculty}</span>
+          <span className="rounded-full bg-brand-500 px-3 py-1 text-sm font-bold shadow-lg">{faculty}</span>
           <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur" aria-label="ปิดกล้อง">
             <X size={22} />
           </button>

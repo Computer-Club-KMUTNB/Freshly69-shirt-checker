@@ -1,18 +1,24 @@
 import "server-only";
 import { db } from "./db";
+import type { EnvPinState, PinEntry } from "./pins";
 import type { Schedule } from "./time";
 
 export interface Settings {
-  adminPinHash: string | null; // null → fall back to ADMIN_PIN env (first setup)
-  staffPinHash: string | null; // null → fall back to STAFF_PIN env
-  staffPinDaily: boolean; // true → staff PIN changes every day (derived, shown to admin)
-  askDeviceName: boolean; // ask for a nickname on unlock (device info is logged either way)
+  /** Several admin PINs (one per person / team), each can be switched off. */
+  adminPins: PinEntry[];
+  /** Several staff PINs, each can be switched off. Ignored while staffPinDaily is on. */
+  staffPins: PinEntry[];
+  /** ADMIN_PIN / STAFF_PIN from Vercel: on, off, or removed from the list. */
+  envPins: { admin?: EnvPinState; staff?: EnvPinState };
+  staffPinDaily: boolean; // true → one staff PIN that changes every day (derived, shown to admin)
+  askDeviceName: boolean; // ask for a nickname on unlock (logged with every action)
   schedule: Schedule;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  adminPinHash: null,
-  staffPinHash: null,
+  adminPins: [],
+  staffPins: [],
+  envPins: {},
   staffPinDaily: false,
   askDeviceName: true,
   schedule: {
@@ -23,6 +29,18 @@ export const DEFAULT_SETTINGS: Settings = {
   },
 };
 
+/** Older versions stored one hash per role (adminPinHash / staffPinHash) → turn into list items. */
+function migrate(raw: Record<string, unknown>): Settings {
+  const s = { ...DEFAULT_SETTINGS, ...raw } as Settings & { adminPinHash?: string | null; staffPinHash?: string | null };
+  const legacy = (hash: string | null | undefined): PinEntry[] =>
+    hash ? [{ id: "legacy", label: "รหัสเดิม", hash, createdAt: new Date(0).toISOString() }] : [];
+  if (!Array.isArray(s.adminPins) || (s.adminPins.length === 0 && s.adminPinHash)) s.adminPins = legacy(s.adminPinHash);
+  if (!Array.isArray(s.staffPins) || (s.staffPins.length === 0 && s.staffPinHash)) s.staffPins = legacy(s.staffPinHash);
+  delete s.adminPinHash;
+  delete s.staffPinHash;
+  return s;
+}
+
 // Settings are read on almost every request but change rarely → cache per server instance.
 // fresh=true bypasses the cache (unlock + admin settings page, where staleness matters).
 const TTL_MS = 15_000;
@@ -32,7 +50,7 @@ export async function getSettings(fresh = false): Promise<Settings> {
   if (!fresh && cache && Date.now() - cache.at < TTL_MS) return cache.value;
   const { data, error } = await db().from("settings").select("value").eq("key", "app").maybeSingle();
   if (error) throw error;
-  const value = { ...DEFAULT_SETTINGS, ...(data?.value ?? {}) };
+  const value = migrate((data?.value as Record<string, unknown>) ?? {});
   cache = { at: Date.now(), value };
   return value;
 }
